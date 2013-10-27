@@ -19,10 +19,12 @@ POTFILES = \
 	$(top_srcdir)/ebfont/ebfont.c \
 	$(top_srcdir)/ebinfo/ebinfo.c \
 	$(top_srcdir)/ebrefile/ebrefile.c \
+	$(top_srcdir)/ebstopcode/ebstopcode.c \
 	$(top_srcdir)/ebzip/copyfile.c \
 	$(top_srcdir)/ebzip/ebzip.c \
 	$(top_srcdir)/ebzip/ebzip1.c \
 	$(top_srcdir)/ebzip/sebxa.c \
+	$(top_srcdir)/ebzip/speedup.c \
 	$(top_srcdir)/ebzip/unzipbook.c \
 	$(top_srcdir)/ebzip/unzipfile.c \
 	$(top_srcdir)/ebzip/zipbook.c \
@@ -43,9 +45,11 @@ prefix = @prefix@
 datadir = @datadir@
 localedir = @localedir@
 
+mkdir_p = @mkdir_p@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
-mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
+mkinstalldirs = $(install_sh) -d
+install_sh = @install_sh@
 
 MSGFMT = @MSGFMT@
 XGETTEXT = @XGETTEXT@

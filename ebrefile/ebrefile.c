@@ -1,16 +1,29 @@
 /*                                                            -*- C -*-
- * Copyright (c) 2001
- *    Motoyuki Kasahara
+ * Copyright (c) 2001-2006  Motoyuki Kasahara
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the project nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -22,33 +35,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
-
-#if defined(STDC_HEADERS) || defined(HAVE_STRING_H)
 #include <string.h>
-#if !defined(STDC_HEADERS) && defined(HAVE_MEMORY_H)
-#include <memory.h>
-#endif /* not STDC_HEADERS and HAVE_MEMORY_H */
-#else /* not STDC_HEADERS and not HAVE_STRING_H */
-#include <strings.h>
-#endif /* not STDC_HEADERS and not HAVE_STRING_H */
-
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
-
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
-#ifdef HAVE_FCNTL_H
-#include <fcntl.h>
-#else
-#include <sys/file.h>
-#endif
-
-#ifdef HAVE_LIMITS_H
 #include <limits.h>
-#endif
+#include <unistd.h>
+#include <fcntl.h>
+#include <utime.h>
 
 #ifdef ENABLE_NLS
 #ifdef HAVE_LOCALE_H
@@ -57,61 +49,18 @@
 #include <libintl.h>
 #endif
 
-#ifndef HAVE_MEMCPY
-#define memcpy(d, s, n) bcopy((s), (d), (n))
-#ifdef __STDC__
-void *memchr(const void *, int, size_t);
-int memcmp(const void *, const void *, size_t);
-void *memmove(void *, const void *, size_t);
-void *memset(void *, int, size_t);
-#else /* not __STDC__ */
-char *memchr();
-int memcmp();
-char *memmove();
-char *memset();
-#endif /* not __STDC__ */
-#endif
-
-#ifndef HAVE_STRCHR
-#define strchr index
-#define strrchr rindex
-#endif /* HAVE_STRCHR */
-
 #ifndef HAVE_STRCASECMP
-#ifdef __STDC__
 int strcasecmp(const char *, const char *);
 int strncasecmp(const char *, const char *, size_t);
-#else /* not __STDC__ */
-int strcasecmp()
-int strncasecmp();
-#endif /* not __STDC__ */
-#endif /* not HAVE_STRCASECMP */
+#endif
 
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
 
 /*
- * Whence parameter for lseek().
- */
-#ifndef SEEK_SET
-#define SEEK_SET 0
-#define SEEK_CUR 1
-#define SEEK_END 2
-#endif
-
-/*
  * stat macros.
  */
-#ifdef  STAT_MACROS_BROKEN
-#ifdef  S_ISREG
-#undef  S_ISREG
-#endif
-#ifdef  S_ISDIR
-#undef  S_ISDIR
-#endif
-#endif  /* STAT_MACROS_BROKEN */
-
 #ifndef S_ISREG
 #define S_ISREG(m)   (((m) & S_IFMT) == S_IFREG)
 #endif
@@ -143,17 +92,6 @@ int strncasecmp();
 #include "yesno.h"
 
 /*
- * Trick for function protypes.
- */
-#ifndef EB_P
-#ifdef __STDC__
-#define EB_P(p) p
-#else /* not __STDC__ */
-#define EB_P(p) ()
-#endif /* not __STDC__ */
-#endif /* EB_P */
-
-/*
  * Tricks for gettext.
  */
 #ifdef ENABLE_NLS
@@ -172,29 +110,21 @@ int strncasecmp();
 #define DEFAULT_OUTPUT_DIRECTORY	"."
 
 /*
- * Character type tests and conversions.
- */
-#define isdigit(c) ('0' <= (c) && (c) <= '9')
-#define isupper(c) ('A' <= (c) && (c) <= 'Z')
-#define islower(c) ('a' <= (c) && (c) <= 'z')
-#define isalpha(c) (isupper(c) || islower(c))
-#define isalnum(c) (isupper(c) || islower(c) || isdigit(c))
-#define isxdigit(c) \
- (isdigit(c) || ('A' <= (c) && (c) <= 'F') || ('a' <= (c) && (c) <= 'f'))
-#define toupper(c) (('a' <= (c) && (c) <= 'z') ? (c) - 0x20 : (c))
-#define tolower(c) (('A' <= (c) && (c) <= 'Z') ? (c) + 0x20 : (c))
-
-/*
  * Unexported functions.
  */
-static void output_help EB_P((void));
-static int refile_book EB_P((const char *, const char *, 
-    char [][EB_MAX_DIRECTORY_NAME_LENGTH + 1], int));
-static int refile_catalog EB_P((const char *, const char *, EB_Disc_Code,
-    char [][EB_MAX_DIRECTORY_NAME_LENGTH + 1], int));
-static RETSIGTYPE trap EB_P((int));
-static int find_subbook_name EB_P((char [][EB_MAX_DIRECTORY_NAME_LENGTH + 1],
-    int, const char *));
+static void output_help(void);
+static int refile_book(const char *out_path, const char *in_path,
+    char subbook_name_list[][EB_MAX_DIRECTORY_NAME_LENGTH + 1],
+    int subbook_name_count);
+static int refile_catalog(const char *out_catalog_name,
+    const char *in_catalog_name, EB_Disc_Code disc_code,
+    char subbook_name_list[][EB_MAX_DIRECTORY_NAME_LENGTH + 1],
+    int subbook_name_count);
+static int copy_file(const char *out_file_name, const char *in_file_name);
+static void trap(int signal_number);
+static int find_subbook_name(char
+    subbook_name_list[][EB_MAX_DIRECTORY_NAME_LENGTH + 1],
+    int subbook_name_count, const char *pattern);
 
 /*
  * Command line options.
@@ -216,15 +146,13 @@ const char *program_version = VERSION;
 const char *invoked_name;
 
 /*
- * File name to be deleted and file to be closed when signal is received.
+ * File names to be deleted when signal is received.
  */
 static const char *trap_file_name = NULL;
 static int trap_file = -1;
 
 int
-main(argc, argv)
-    int argc;
-    char *argv[];
+main(int argc, char *argv[])
 {
     EB_Error_Code error_code;
     char out_path[PATH_MAX + 1];
@@ -332,6 +260,12 @@ main(argc, argv)
         strcpy(book_path, DEFAULT_BOOK_DIRECTORY);
     else
         strcpy(book_path, argv[optind]);
+
+    if (is_ebnet_url(book_path)) {
+	fprintf(stderr, "%s: %s\n", invoked_name,
+	    eb_error_message(EB_ERR_EBNET_UNSUPPORTED));
+	goto die;
+    }
     canonicalize_path(book_path);
 
     if (PATH_MAX
@@ -342,9 +276,25 @@ main(argc, argv)
     }
 
     /*
+     * Set signals.
+     */
+#ifdef SIGHUP
+    signal(SIGHUP, trap);
+#endif
+    signal(SIGINT, trap);
+#ifdef SIGQUIT
+    signal(SIGQUIT, trap);
+#endif
+#ifdef SIGTERM
+    signal(SIGTERM, trap);
+#endif
+
+    /*
      * Refile a catalog.
      */
-    refile_book(out_path, book_path, subbook_name_list, subbook_name_count);
+    if (refile_book(out_path, book_path, subbook_name_list,
+	subbook_name_count) < 0)
+	goto die;
 
     eb_finalize_library();
 
@@ -363,7 +313,7 @@ main(argc, argv)
  * Output help message to stdandard out.
  */
 static void
-output_help()
+output_help(void)
 {
     printf(_("Usage: %s [option...] [book-directory]\n"), program_name);
     printf(_("Options:\n"));
@@ -386,17 +336,23 @@ output_help()
 }
 
 
+/*
+ * Read a catalog file in `in_path' and create refiled catalog file
+ * in `out_path'.
+ */
 static int
-refile_book(out_path, in_path, subbook_name_list, subbook_name_count)
-    const char *out_path;
-    const char *in_path;
-    char subbook_name_list[][EB_MAX_DIRECTORY_NAME_LENGTH + 1];
-    int subbook_name_count;
+refile_book(const char *out_path, const char *in_path,
+    char subbook_name_list[][EB_MAX_DIRECTORY_NAME_LENGTH + 1],
+    int subbook_name_count)
 {
-    char in_path_name[PATH_MAX + 1];
-    char out_path_name[PATH_MAX + 1];
+    char in_file_name[PATH_MAX + 1];
+    char out_file_name[PATH_MAX + 1];
+    char tmp_file_name[PATH_MAX + 1];
+    char old_file_name[PATH_MAX + 1];
     char in_base_name[EB_MAX_FILE_NAME_LENGTH + 1];
     EB_Disc_Code disc_code;
+    struct stat out_status;
+    struct stat old_status;
 
     /*
      * Find a catalog file.
@@ -413,27 +369,61 @@ refile_book(out_path, in_path, subbook_name_list, subbook_name_count)
     }
 
     /*
-     * Set input and output file name. 
+     * Set file names.
      */
-    eb_compose_path_name(in_path, in_base_name, in_path_name);
-    eb_compose_path_name(out_path, in_base_name, out_path_name);
-    eb_fix_path_name_suffix(out_path_name, ".new");
+    eb_compose_path_name(in_path, in_base_name, in_file_name);
+    eb_compose_path_name(out_path, in_base_name, out_file_name);
 
-    refile_catalog(out_path_name, in_path_name, disc_code, 
-	subbook_name_list, subbook_name_count);
+    strcpy(old_file_name, out_file_name);
+    eb_fix_path_name_suffix(old_file_name, ".old");
+    strcpy(tmp_file_name, out_file_name);
+    eb_fix_path_name_suffix(tmp_file_name, ".tmp");
+
+    /*
+     * Copy the original catalog file.
+     */
+    if (stat(old_file_name, &old_status) < 0
+	&& errno == ENOENT
+	&& stat(out_file_name, &out_status) == 0
+	&& S_ISREG(out_status.st_mode)) {
+	trap_file_name = old_file_name;
+	if (copy_file(old_file_name, out_file_name) < 0)
+	    return -1;
+	trap_file_name = NULL;
+    }
+
+    /*
+     * Refile the catalog file.
+     */
+    trap_file_name = tmp_file_name;
+    if (refile_catalog(tmp_file_name, in_file_name, disc_code,
+	subbook_name_list, subbook_name_count) < 0) {
+	unlink(tmp_file_name);
+	rename(old_file_name, out_file_name);
+	return -1;
+    }
+    if (rename(tmp_file_name, out_file_name) < 0) {
+	fprintf(stderr, _("%s: failed to move the file, %s: %s -> %s\n"),
+	    invoked_name, strerror(errno), tmp_file_name, out_file_name);
+	unlink(tmp_file_name);
+	return -1;
+    }
+
+    trap_file_name = NULL;
 
     return 0;
 }
 
 
+/*
+ * Read a catalog file `in_catalog_name' and create refiled catalog file
+ * as `out_catalog_name'.
+ */
 static int
-refile_catalog(out_catalog_name, in_catalog_name, disc_code,
-    subbook_name_list, subbook_name_count)
-    const char *out_catalog_name;
-    const char *in_catalog_name;
-    EB_Disc_Code disc_code;
-    char subbook_name_list[][EB_MAX_DIRECTORY_NAME_LENGTH + 1];
-    int subbook_name_count;
+refile_catalog(const char *out_catalog_name, const char *in_catalog_name,
+    EB_Disc_Code disc_code,
+    char subbook_name_list[][EB_MAX_DIRECTORY_NAME_LENGTH + 1],
+    int subbook_name_count)
 {
     char buffer[EB_SIZE_PAGE];
     char directory_name[EB_MAX_DIRECTORY_NAME_LENGTH + 1];
@@ -456,16 +446,6 @@ refile_catalog(out_catalog_name, in_catalog_name, disc_code,
     /*
      * Open input file.
      */
-#ifdef SIGHUP
-    signal(SIGHUP, trap);
-#endif
-    signal(SIGINT, trap);
-#ifdef SIGQUIT
-    signal(SIGQUIT, trap);
-#endif
-#ifdef SIGTERM
-    signal(SIGTERM, trap);
-#endif
     in_file = open(in_catalog_name, O_RDONLY | O_BINARY);
     if (in_file < 0) {
 	fprintf(stderr, _("%s: failed to open the file, %s: %s\n"),
@@ -476,21 +456,18 @@ refile_catalog(out_catalog_name, in_catalog_name, disc_code,
     /*
      * Open output file.
      */
-    out_file_offset = 0;
 #ifdef O_CREAT
     out_file = open(out_catalog_name, O_CREAT | O_TRUNC | O_WRONLY | O_BINARY,
 	0666 ^ get_umask());
 #else
     out_file = creat(out_catalog_name, 0666 ^ get_umask());
 #endif
+    trap_file = out_file;
     if (out_file < 0) {
 	fprintf(stderr, _("%s: failed to open the file, %s: %s\n"),
 	    invoked_name, strerror(errno), out_catalog_name);
 	goto failed;
     }
-
-    trap_file_name = out_catalog_name;
-    trap_file = out_file;
 
     /*
      * Copy header.
@@ -507,7 +484,7 @@ refile_catalog(out_catalog_name, in_catalog_name, disc_code,
 	    invoked_name, strerror(errno), out_catalog_name);
         goto failed;
     }
-    out_file_offset += 16;
+    out_file_offset = 16;
 
     /*
      * Copy basic information of subbooks.
@@ -609,7 +586,7 @@ refile_catalog(out_catalog_name, in_catalog_name, disc_code,
 		invoked_name, strerror(errno), in_catalog_name);
 	    goto failed;
 	}
-	if (write(out_file, buffer, (size_t)read_length) != read_length) {
+	if (write(out_file, buffer, read_length) != read_length) {
 	    fprintf(stderr, _("%s: failed to write the file, %s: %s\n"),
 		invoked_name, strerror(errno), out_catalog_name);
 	    goto failed;
@@ -642,7 +619,7 @@ refile_catalog(out_catalog_name, in_catalog_name, disc_code,
 	buffer[0] = (subbook_name_count >> 8) & 0xff;
 	buffer[1] =  subbook_name_count       & 0xff;
     }
-    if (lseek(out_file, (off_t)0, SEEK_SET) < 0) {
+    if (lseek(out_file, 0, SEEK_SET) < 0) {
 	fprintf(stderr, _("%s: failed to seek the file, %s: %s\n"),
 	    invoked_name, strerror(errno), out_catalog_name);
 	goto failed;
@@ -657,24 +634,112 @@ refile_catalog(out_catalog_name, in_catalog_name, disc_code,
      * Close files.
      */
     close(in_file);
-    in_file = -1;
-
     close(out_file);
-    out_file = -1;
-
     trap_file = -1;
-    trap_file_name = NULL;
 
-#ifdef SIGHUP
-    signal(SIGHUP, SIG_DFL);
+    return 0;
+
+    /*
+     * An error occurs...
+     */
+  failed:
+    if (0 <= in_file)
+	close(in_file);
+    if (0 <= out_file)
+	close(out_file);
+    return -1;
+}
+
+
+/*
+ * Copy a file from `in_file_name' to `out_file_name'.
+ * If it succeeds, 0 is returned.  Otherwise -1 is returned.
+ */
+static int
+copy_file(const char *out_file_name, const char *in_file_name)
+{
+    unsigned char buffer[EB_SIZE_PAGE];
+    size_t copied_length;
+    struct stat in_status;
+    int in_file = -1, out_file = -1;
+    ssize_t read_result;
+    struct utimbuf utim;
+
+    /*
+     * Check for the input file.
+     */
+    if (stat(in_file_name, &in_status) != 0 || !S_ISREG(in_status.st_mode)) {
+	fprintf(stderr, _("%s: no such file: %s\n"), invoked_name,
+	    in_file_name);
+	goto failed;
+    }
+
+    /*
+     * Open files.
+     */
+    in_file = open(in_file_name, O_RDONLY | O_BINARY);
+    if (in_file < 0) {
+	fprintf(stderr, _("%s: failed to open the file, %s: %s\n"),
+	    invoked_name, strerror(errno), in_file_name);
+	goto failed;
+    }
+
+#ifdef O_CREAT
+    out_file = open(out_file_name, O_CREAT | O_TRUNC | O_WRONLY | O_BINARY,
+	0666 ^ get_umask());
+#else
+    out_file = creat(out_file_name, 0666 ^ get_umask());
 #endif
-    signal(SIGINT, SIG_DFL);
-#ifdef SIGQUIT
-    signal(SIGQUIT, SIG_DFL);
-#endif
-#ifdef SIGTERM
-    signal(SIGTERM, SIG_DFL);
-#endif
+    trap_file = out_file;
+    if (out_file < 0) {
+	fprintf(stderr, _("%s: failed to open the file, %s: %s\n"),
+	    invoked_name, strerror(errno), out_file_name);
+	goto failed;
+    }
+
+    /*
+     * Read data from the input file, compress the data, and then
+     * write them to the output file.
+     */
+    copied_length = 0;
+    for (;;) {
+	/*
+	 * Read data from `in_file', and write them to `out_file'.
+	 */
+	read_result = read(in_file, buffer, EB_SIZE_PAGE);
+	if (read_result == 0) {
+	    break;
+	} else if (read_result < 0) {
+	    fprintf(stderr, _("%s: failed to read from the file, %s: %s\n"),
+		invoked_name, strerror(errno), in_file_name);
+	    goto failed;
+	}
+
+	/*
+	 * Write decoded data to `out_file'.
+	 */
+	if (write(out_file, buffer, read_result) != read_result) {
+	    fprintf(stderr, _("%s: failed to write to the file, %s: %s\n"),
+		invoked_name, strerror(errno), out_file_name);
+	    goto failed;
+	}
+	copied_length += read_result;
+    }
+
+    /*
+     * Close files.
+     */
+    close(in_file);
+    close(out_file);
+    trap_file = -1;
+
+    /*
+     * Set owner, group, permission, atime and mtime of `out_file'.
+     * We ignore return values of `chown', `chmod' and `utime'.
+     */
+    utim.actime = in_status.st_atime;
+    utim.modtime = in_status.st_mtime;
+    utime(out_file_name, &utim);
 
     return 0;
 
@@ -690,31 +755,32 @@ refile_catalog(out_catalog_name, in_catalog_name, disc_code,
     return -1;
 }
 
+
 /*
  * Signal handler.
  */
-static RETSIGTYPE
-trap(signal_number)
-    int signal_number;
+static void
+trap(int signal_number)
 {
     if (0 <= trap_file)
 	close(trap_file);
     if (trap_file_name != NULL)
 	unlink(trap_file_name);
-    
-    exit(1);
 
-    /* not reached */
-#ifndef RETSIGTYPE_VOID
-    return 0;
-#endif
+    exit(1);
 }
 
+
+/*
+ * Search `subbook_name_list[]' for `pattern'.
+ * `subbook_name_count' is length of `subbook_name_list[]'.
+ *
+ * If found, the function returns index of the element.  Otherwise it 
+ * returns -1.
+ */
 static int
-find_subbook_name(subbook_name_list, subbook_name_count, pattern)
-    char subbook_name_list[][EB_MAX_DIRECTORY_NAME_LENGTH + 1];
-    int subbook_name_count;
-    const char *pattern;
+find_subbook_name(char subbook_name_list[][EB_MAX_DIRECTORY_NAME_LENGTH + 1],
+    int subbook_name_count, const char *pattern)
 {
     char canonicalized_pattern[EB_MAX_FILE_NAME_LENGTH + 1];
     char *space;

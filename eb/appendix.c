@@ -1,22 +1,38 @@
 /*
- * Copyright (c) 1997, 98, 2000, 01
-      Motoyuki Kasahara
+ * Copyright (c) 1997-2006  Motoyuki Kasahara
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the project nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include "build-pre.h"
 #include "eb.h"
 #include "error.h"
 #include "appendix.h"
+#ifdef ENABLE_EBNET
+#include "ebnet.h"
+#endif
 #include "build-post.h"
 
 /*
@@ -34,15 +50,14 @@ static pthread_mutex_t appendix_counter_mutex = PTHREAD_MUTEX_INITIALIZER;
 /*
  * Unexported functions.
  */
-static EB_Error_Code eb_load_appendix_catalog EB_P((EB_Appendix *));
+static EB_Error_Code eb_load_appendix_catalog(EB_Appendix *appendix);
 
 
 /*
  * Initialize alternation text cache in `appendix'.
  */
 void
-eb_initialize_alt_caches(appendix)
-    EB_Appendix *appendix;
+eb_initialize_alt_caches(EB_Appendix *appendix)
 {
     EB_Alternation_Cache *p;
     int i;
@@ -64,8 +79,7 @@ eb_initialize_alt_caches(appendix)
  * Finalize alternation text cache in `appendix'.
  */
 void
-eb_finalize_alt_caches(appendix)
-    EB_Appendix *appendix;
+eb_finalize_alt_caches(EB_Appendix *appendix)
 {
     LOG(("in+out: eb_finalize_alt_caches(appendix=%d)", (int)appendix->code));
 
@@ -77,8 +91,7 @@ eb_finalize_alt_caches(appendix)
  * Initialize `appendix'.
  */
 void
-eb_initialize_appendix(appendix)
-    EB_Appendix *appendix;
+eb_initialize_appendix(EB_Appendix *appendix)
 {
     LOG(("in: eb_initialize_appendix()"));
 
@@ -89,6 +102,9 @@ eb_initialize_appendix(appendix)
     appendix->subbook_count = 0;
     appendix->subbooks = NULL;
     appendix->subbook_current = NULL;
+#ifdef ENABLE_EBNET
+    appendix->ebnet_file = -1;
+#endif
     eb_initialize_lock(&appendix->lock);
     eb_initialize_alt_caches(appendix);
 
@@ -100,8 +116,7 @@ eb_initialize_appendix(appendix)
  * Finalize `appendix'.
  */
 void
-eb_finalize_appendix(appendix)
-    EB_Appendix *appendix;
+eb_finalize_appendix(EB_Appendix *appendix)
 {
     LOG(("in: eb_finalize_appendix(appendix=%d)", (int)appendix->code));
 
@@ -125,6 +140,10 @@ eb_finalize_appendix(appendix)
     eb_finalize_lock(&appendix->lock);
     eb_finalize_alt_caches(appendix);
 
+#ifdef ENABLE_EBNET
+    ebnet_finalize_appendix(appendix);
+#endif
+
     LOG(("out: eb_finalize_appendix()"));
 }
 
@@ -133,12 +152,11 @@ eb_finalize_appendix(appendix)
  * Bind `appendix' to `path'.
  */
 EB_Error_Code
-eb_bind_appendix(appendix, path)
-    EB_Appendix *appendix;
-    const char *path;
+eb_bind_appendix(EB_Appendix *appendix, const char *path)
 {
     EB_Error_Code error_code;
     char temporary_path[EB_MAX_PATH_LENGTH + 1];
+    int is_ebnet;
 
     eb_lock(&appendix->lock);
     LOG(("in: eb_bind_appendix(path=%s)", path));
@@ -159,6 +177,17 @@ eb_bind_appendix(appendix, path)
     pthread_mutex_unlock(&appendix_counter_mutex);
 
     /*
+     * Check whether `path' is URL.
+     */
+    is_ebnet = is_ebnet_url(path);
+#ifndef ENABLE_EBNET
+    if (is_ebnet) {
+	error_code = EB_ERR_EBNET_UNSUPPORTED;
+	goto failed;
+    }
+#endif
+
+    /*
      * Set path of the appendix.
      * The length of the file name "path/subdir/subsubdir/file.;1" must
      * be EB_MAX_PATH_LENGTH maximum.
@@ -168,14 +197,20 @@ eb_bind_appendix(appendix, path)
 	goto failed;
     }
     strcpy(temporary_path, path);
+#ifdef ENABLE_EBNET
+    if (is_ebnet)
+	error_code = ebnet_canonicalize_url(temporary_path);
+    else
+	error_code = eb_canonicalize_path_name(temporary_path);
+#else
     error_code = eb_canonicalize_path_name(temporary_path);
+#endif
     if (error_code != EB_SUCCESS)
 	goto failed;
     appendix->path_length = strlen(temporary_path);
 
     if (EB_MAX_PATH_LENGTH
-	< appendix->path_length + 1 + EB_MAX_DIRECTORY_NAME_LENGTH
-	+ 1 + EB_MAX_DIRECTORY_NAME_LENGTH + 1 + EB_MAX_FILE_NAME_LENGTH) {
+	< appendix->path_length + 1 + EB_MAX_RELATIVE_PATH_LENGTH) {
 	error_code = EB_ERR_TOO_LONG_FILE_NAME;
 	goto failed;
     }
@@ -186,6 +221,17 @@ eb_bind_appendix(appendix, path)
 	goto failed;
     }
     strcpy(appendix->path, temporary_path);
+
+    /*
+     * Establish a connection with a ebnet server.
+     */
+#ifdef ENABLE_EBNET
+    if (is_ebnet) {
+	error_code = ebnet_bind_appendix(appendix, appendix->path);
+	if (error_code != EB_SUCCESS)
+	    goto failed;
+    }
+#endif
 
     /*
      * Read information from the catalog file.
@@ -216,8 +262,7 @@ eb_bind_appendix(appendix, path)
  * Return EB_SUCCESS, if it succeeds, error-code ohtherwise.
  */
 static EB_Error_Code
-eb_load_appendix_catalog(appendix)
-    EB_Appendix *appendix;
+eb_load_appendix_catalog(EB_Appendix *appendix)
 {
     EB_Error_Code error_code;
     char buffer[EB_SIZE_PAGE];
@@ -343,8 +388,7 @@ eb_load_appendix_catalog(appendix)
  * Examine whether `appendix' is bound or not.
  */
 int
-eb_is_appendix_bound(appendix)
-    EB_Appendix *appendix;
+eb_is_appendix_bound(EB_Appendix *appendix)
 {
     int is_bound;
 
@@ -364,9 +408,7 @@ eb_is_appendix_bound(appendix)
  * Get the bound path of `appendix'.
  */
 EB_Error_Code
-eb_appendix_path(appendix, path)
-    EB_Appendix *appendix;
-    char *path;
+eb_appendix_path(EB_Appendix *appendix, char *path)
 {
     EB_Error_Code error_code;
 

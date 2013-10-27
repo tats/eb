@@ -7,9 +7,10 @@ bin_PROGRAMS = ebzip
 noinst_HEADERS = ebzip.h
 
 ebzip_SOURCES = ebzip.c ebzip1.c copyfile.c unzipbook.c unzipfile.c \
-	zipbook.c zipfile.c zipinfobook.c zipinfofile.c sebxa.c
-ebzip_LDADD = $(LIBEB) $(LIBEBUTILS) $(ZLIBLIBS) $(INTLLIBS)
-ebzip_DEPENDENCIES = $(LIBEB) $(LIBEBUTILS) $(ZLIBDEPS) $(INTLDEPS)
+	zipbook.c zipfile.c zipinfobook.c zipinfofile.c sebxa.c speedup.c
+ebzip_LDADD = $(LIBEB) $(LIBEBUTILS) $(ZLIBLIBS) $(INTLLIBS) $(ICONVLIBS)
+ebzip_DEPENDENCIES = $(LIBEB) $(LIBEBUTILS) $(ZLIBDEPS) $(INTLDEPS) \
+	$(ICONVDEPS)
 
 INCLUDES = -I../libebutils -I$(top_srcdir)/libebutils \
 	-I../eb -I$(top_srcdir)/eb $(INTLINCS) $(ZLIBINCS)

@@ -1,20 +1,40 @@
 /*                                                            -*- C -*-
- * Copyright (c) 1998, 99, 2000, 01  
- *    Motoyuki Kasahara
+ * Copyright (c) 1998-2006  Motoyuki Kasahara
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the project nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include "ebzip.h"
 #include "ebutils.h"
+
+#if defined(DOS_FILE_PATH) && defined(HAVE_MBSTRING_H)
+/* a path may contain double-byte chars in SJIS. */
+#include <mbstring.h>
+#define strchr  _mbschr
+#define strrchr _mbsrchr
+#endif
 
 /*
  * Program name and version.
@@ -26,7 +46,7 @@ const char *invoked_name;
 /*
  * Command line options.
  */
-static const char *short_options = "fhikl:no:qs:S:tT:uvz";
+static const char *short_options = "fhikl:no:qs:S:tT:uvw:z";
 static struct option long_options[] = {
     {"force-overwrite",   no_argument,       NULL, 'f'},
     {"help",              no_argument,       NULL, 'h'},
@@ -42,6 +62,7 @@ static struct option long_options[] = {
     {"test",              no_argument,       NULL, 't'},
     {"uncompress",        no_argument,       NULL, 'u'},
     {"version",           no_argument,       NULL, 'v'},
+    {"overwrite",         required_argument, NULL, 'w'},
     {"compress",          no_argument,       NULL, 'z'},
     {NULL, 0, NULL, 0}
 };
@@ -64,7 +85,7 @@ int ebzip_quiet_flag = EBZIP_DEFAULT_QUIET;
 /*
  * Test mode flag.
  */
-int ebzip_test_flag = EBZIP_DEFAULT_OVERWRITE;
+int ebzip_test_flag = EBZIP_DEFAULT_TEST;
 
 /*
  * Overwrite mode.
@@ -91,27 +112,26 @@ static int action_mode = EBZIP_ACTION_ZIP;
 /*
  * A list of subbook names to be compressed/uncompressed.
  */
-static char 
+static char
 subbook_name_list[EB_MAX_SUBBOOKS][EB_MAX_DIRECTORY_NAME_LENGTH + 1];
 static int subbook_name_count = 0;
 
 /*
  * Unexported functions.
  */
-static int parse_zip_level EB_P((const char *, int *));
-static int parse_skip_content_argument EB_P((const char *));
-static void output_help EB_P((void));
+static int parse_zip_level(const char *argument, int *zip_level);
+static int parse_skip_content_argument(const char *argument);
+static void output_help(void);
 
 
 int
-main(argc, argv)
-    int argc;
-    char *argv[];
+main(int argc, char *argv[])
 {
     EB_Error_Code error_code;
     char out_top_path[PATH_MAX + 1];
     char book_path[PATH_MAX + 1];
     int ch;
+    char *last_slash, *last_backslash;
     char *invoked_base_name;
 
     invoked_name = argv[0];
@@ -129,17 +149,26 @@ main(argc, argv)
 #endif
 
     /*
-     * Set default action.
-     */
-    invoked_base_name = strrchr(argv[0], '/');
-    if (invoked_base_name == NULL)
-	invoked_base_name = argv[0];
-    else
-	invoked_base_name++;
-
-    /*
      * Determine the default action.
      */
+    last_slash = strrchr(argv[0], '/');
+#ifndef DOS_FILE_PATH
+    last_backslash = NULL;
+#else
+    last_backslash = strrchr(argv[0], '\\');
+#endif
+
+    if (last_slash == NULL && last_backslash == NULL)
+	invoked_base_name = argv[0];
+    else if (last_slash == NULL)
+	invoked_base_name = last_backslash + 1;
+    else if (last_backslash == NULL)
+	invoked_base_name = last_slash + 1;
+    else if (last_slash < last_backslash)
+	invoked_base_name = last_backslash + 1;
+    else
+	invoked_base_name = last_slash + 1;
+
 #ifndef EXEEXT_EXE
     if (strcmp(invoked_base_name, "ebunzip") == 0)
 	action_mode = EBZIP_ACTION_UNZIP;
@@ -150,6 +179,8 @@ main(argc, argv)
 	|| strcasecmp(invoked_base_name, "ebunzip.exe") == 0) {
 	action_mode = EBZIP_ACTION_UNZIP;
     } else if (strcasecmp(invoked_base_name, "ebzipinfo") == 0
+	|| strcasecmp(invoked_base_name, "ebzipinfo.exe") == 0
+	|| strcasecmp(invoked_base_name, "ebzipinf") == 0
 	|| strcasecmp(invoked_base_name, "ebzipinf.exe") == 0) {
 	action_mode = EBZIP_ACTION_INFO;
     }
@@ -158,9 +189,7 @@ main(argc, argv)
     /*
      * Set overwrite mode.
      */
-    if (isatty(0))
-	ebzip_overwrite_mode = EBZIP_OVERWRITE_QUERY;
-    else
+    if (!isatty(0))
 	ebzip_overwrite_mode = EBZIP_OVERWRITE_NO;
 
     /*
@@ -183,7 +212,7 @@ main(argc, argv)
         switch (ch) {
         case 'f':
             /*
-             * Option `-f'.  Set `force' to the overwrite flag.
+             * Obsolete option `-f'.  Set `force' to the overwrite flag.
              */
 	    ebzip_overwrite_mode = EBZIP_OVERWRITE_FORCE;
 	    break;
@@ -219,7 +248,7 @@ main(argc, argv)
 
         case 'n':
             /*
-             * Option `-n'.  Set `no' to the overwrite flag.
+             * Obsolete option `-n'.  Set `no' to the overwrite flag.
              */
 	    ebzip_overwrite_mode = EBZIP_OVERWRITE_NO;
 	    break;
@@ -293,6 +322,24 @@ main(argc, argv)
             output_version(program_name, program_version);
             exit(0);
 
+	case 'w':
+            /*
+             * Option `-w'.  Set overwrite mode.
+             */
+	    if (strcasecmp(optarg, "confirm") == 0)
+		ebzip_overwrite_mode = EBZIP_OVERWRITE_CONFIRM;
+	    else if (strcasecmp(optarg, "force") == 0)
+		ebzip_overwrite_mode = EBZIP_OVERWRITE_FORCE;
+	    else if (strcasecmp(optarg, "no") == 0)
+		ebzip_overwrite_mode = EBZIP_OVERWRITE_NO;
+	    else {
+		fprintf(stderr, _("%s: invalid overwrite mode: %s\n"),
+		    invoked_name, optarg);
+		output_try_help(invoked_name);
+		goto die;
+	    }
+	    break;
+		
         case 'z':
             /*
              * Option `-z'.  Compression mode.
@@ -322,6 +369,12 @@ main(argc, argv)
         strcpy(book_path, EBZIP_DEFAULT_BOOK_DIRECTORY);
     else
         strcpy(book_path, argv[optind]);
+
+    if (is_ebnet_url(book_path)) {
+        fprintf(stderr, "%s: %s\n", invoked_name,
+	    eb_error_message(EB_ERR_EBNET_UNSUPPORTED));
+	goto die;
+    }
     canonicalize_path(book_path);
 
     /*
@@ -368,15 +421,13 @@ main(argc, argv)
  * Otherwise -1 is returned.
  */
 static int
-parse_zip_level(argument, zip_level)
-    const char *argument;
-    int *zip_level;
+parse_zip_level(const char *argument, int *zip_level)
 {
     char *end_p;
     int level;
 
     level = (int)strtol(argument, &end_p, 10);
-    if (!isdigit(*argument) || *end_p != '\0'
+    if (!ASCII_ISDIGIT(*argument) || *end_p != '\0'
 	|| level < 0 || ZIO_MAX_EBZIP_LEVEL < level) {
 	fprintf(stderr, _("%s: invalid compression level `%s'\n"),
 	    invoked_name, argument);
@@ -396,8 +447,7 @@ parse_zip_level(argument, zip_level)
  * Otherwise -1 is returned.
  */
 static int
-parse_skip_content_argument(argument)
-    const char *argument;
+parse_skip_content_argument(const char *argument)
 {
     const char *argument_p = argument;
     char name[EB_MAX_DIRECTORY_NAME_LENGTH + 1];
@@ -412,7 +462,7 @@ parse_skip_content_argument(argument)
 	name_p = name;
 	while (*argument_p != ',' && *argument_p != '\0'
 	    && i < EB_MAX_DIRECTORY_NAME_LENGTH) {
-		*name_p = tolower(*argument_p);
+		*name_p = ASCII_TOLOWER(*argument_p);
 	    i++;
 	    name_p++;
 	    argument_p++;
@@ -455,20 +505,22 @@ parse_skip_content_argument(argument)
  * Output help message to stdandard out.
  */
 static void
-output_help()
+output_help(void)
 {
     printf(_("Usage: %s [option...] [book-directory]\n"), program_name);
     printf(_("Options:\n"));
-    printf(_("  -f  --force-overwrite      force overwrite of output files\n"));
+    printf(_("  -f  --force-overwrite      set overwrite mode to `force'\n"));
+    printf(_("                             (same as `--overwrite force')\n"));
     printf(_("  -h  --help                 display this help, then exit\n"));
     printf(_("  -i  --information          list information of compressed files\n"));
-    printf(_("  -k  --keep                 keep (don't delete) original files\n"));
+    printf(_("  -k  --keep                 don't delete original files\n"));
     printf(_("  -l INTEGER  --level INTEGER\n"));
     printf(_("                             compression level; 0..%d\n"),
 	ZIO_MAX_EBZIP_LEVEL);
     printf(_("                             (default: %d)\n"),
 	EBZIP_DEFAULT_LEVEL);
-    printf(_("  -n  --no-overwrite         don't overwrite output files\n"));
+    printf(_("  -n  --no-overwrite         set overwrite mode to `no'\n"));
+    printf(_("                             (same as `--overwrite no')\n"));
     printf(_("  -o DIRECTORY  --output-directory DIRECTORY\n"));
     printf(_("                             ouput files under DIRECTORY\n"));
     printf(_("                             (default: %s)\n"),
@@ -483,6 +535,9 @@ output_help()
     printf(_("  -t  --test                 only check for input files\n"));
     printf(_("  -u  --uncompress           uncompress files\n"));
     printf(_("  -v  --version              display version number, then exit\n"));
+    printf(_("  -w MODE  --overwrite MODE  set overwrite mode of output files;\n"));
+    printf(_("                             confirm, force or no\n"));
+    printf(_("                             (default: confirm)\n"));
     printf(_("  -z  --compress             compress files\n"));
     printf(_("\nArgument:\n"));
     printf(_("  book-directory             top directory of a CD-ROM book\n"));

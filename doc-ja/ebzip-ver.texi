@@ -1,3 +1,0 @@
-@set UPDATED 2003 Ç¯ 3 ·î 8 Æü
-@set EDITION 3.3.2
-@set VERSION 3.3.2

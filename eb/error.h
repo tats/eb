@@ -1,16 +1,29 @@
 /*                                                            -*- C -*-
- * Copyright (c) 1997, 98, 2000, 01  
- *    Motoyuki Kasahara
+ * Copyright (c) 1997-2006  Motoyuki Kasahara
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the project nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #ifndef EB_ERROR_H
@@ -77,35 +90,46 @@ extern "C" {
 #define EB_ERR_NO_FONT			38
 #define EB_ERR_NO_TEXT			39
 
-#define EB_ERR_NO_CUR_SUB		40
-#define EB_ERR_NO_CUR_APPSUB		41
-#define EB_ERR_NO_CUR_FONT		42
-#define EB_ERR_NO_CUR_BINARY		43
-#define EB_ERR_NO_SUCH_SUB		44
+#define EB_ERR_NO_STOPCODE		40
+#define EB_ERR_NO_ALT			41
+#define EB_ERR_NO_CUR_SUB		42
+#define EB_ERR_NO_CUR_APPSUB		43
+#define EB_ERR_NO_CUR_FONT		44
 
-#define EB_ERR_NO_SUCH_APPSUB		45
-#define EB_ERR_NO_SUCH_FONT		46
-#define EB_ERR_NO_SUCH_CHAR_BMP		47
-#define EB_ERR_NO_SUCH_CHAR_TEXT	48
-#define EB_ERR_NO_SUCH_SEARCH		49
+#define EB_ERR_NO_CUR_BINARY		45
+#define EB_ERR_NO_SUCH_SUB		46
+#define EB_ERR_NO_SUCH_APPSUB		47
+#define EB_ERR_NO_SUCH_FONT		48
+#define EB_ERR_NO_SUCH_CHAR_BMP		49
 
-#define EB_ERR_NO_SUCH_HOOK		50
-#define EB_ERR_NO_SUCH_BINARY		51
-#define EB_ERR_DIFF_CONTENT		52
-#define EB_ERR_NO_PREV_SEARCH		53
-#define EB_ERR_NO_SUCH_MULTI_ID		54
+#define EB_ERR_NO_SUCH_CHAR_TEXT	50
+#define EB_ERR_NO_SUCH_SEARCH		51
+#define EB_ERR_NO_SUCH_HOOK		52
+#define EB_ERR_NO_SUCH_BINARY		53
+#define EB_ERR_DIFF_CONTENT		54
 
-#define EB_ERR_NO_SUCH_ENTRY_ID		55
-#define EB_ERR_TOO_MANY_WORDS		56
-#define EB_ERR_NO_WORD			57
-#define EB_ERR_NO_CANDIDATES		58
-#define EB_ERR_END_OF_CONTENT		59
-#define EB_ERR_NO_PREV_SEEK		60
+#define EB_ERR_NO_PREV_SEARCH		55
+#define EB_ERR_NO_SUCH_MULTI_ID		56
+#define EB_ERR_NO_SUCH_ENTRY_ID		57
+#define EB_ERR_TOO_MANY_WORDS		58
+#define EB_ERR_NO_WORD			59
+
+#define EB_ERR_NO_CANDIDATES		60
+#define EB_ERR_END_OF_CONTENT		61
+#define EB_ERR_NO_PREV_SEEK		62
+#define EB_ERR_EBNET_UNSUPPORTED	63
+#define EB_ERR_EBNET_FAIL_CONNECT	64
+
+#define EB_ERR_EBNET_SERVER_BUSY	65
+#define EB_ERR_EBNET_NO_PERMISSION	66
+#define EB_ERR_UNBOUND_BOOKLIST		67
+#define EB_ERR_NO_SUCH_BOOK		68
+
 
 /*
  * The number of error codes.
  */
-#define EB_NUMBER_OF_ERRORS		61
+#define EB_NUMBER_OF_ERRORS		69
 
 /*
  * The maximum length of an error message.
@@ -116,8 +140,8 @@ extern "C" {
  * Function declarations.
  */
 /* error.c */
-const char *eb_error_string EB_P((EB_Error_Code));
-const char *eb_error_message EB_P((EB_Error_Code));
+const char *eb_error_string(EB_Error_Code error_code);
+const char *eb_error_message(EB_Error_Code error_code);
 
 #ifdef __cplusplus
 }

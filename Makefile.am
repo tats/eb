@@ -1,22 +1,16 @@
 ACLOCAL_AMFLAGS = -I m4
 
-if INCLUDED_ZLIB
-ZLIB_SUBDIR = zlib
-else
-ZLIB_SUBDIR = 
-endif
-
 if ENABLE_SAMPLES
 SAMPLES_SUBDIR = samples
 else
 SAMPLES_SUBDIR =
 endif
 
-SUBDIRS = $(ZLIB_SUBDIR) eb libebutils ebappendix ebfont ebinfo \
-   ebrefile ebzip doc doc-ja po-eb po-ebutils m4 $(SAMPLES_SUBDIR)
+SUBDIRS = eb libebutils ebappendix ebfont ebinfo ebrefile ebstopcode ebzip \
+	doc po-eb po-ebutils m4 $(SAMPLES_SUBDIR)
 
-EXTRA_DIST = ChangeLog.0 ChangeLog.1 INSTALL-ja README-ja move-if-change \
-   eb.conf.in gttest.mo gttest.po
+EXTRA_DIST = ChangeLog.0 ChangeLog.1 ChangeLog.2 move-if-change \
+   eb.conf.in misc/ebfixlog misc/ebdump
 CLEANFILES = eb.conf
 
 appendixdir = $(pkgdatadir)/appendix
@@ -34,9 +28,10 @@ eb.conf: eb.conf.in Makefile
 	   -e 's;\@PTHREAD_CPPFLAGS\@;$(PTHREAD_CPPFLAGS);' \
 	   -e 's;\@PTHREAD_CFLAGS\@;$(PTHREAD_CFLAGS);' \
 	   -e 's;\@PTHREAD_LDFLAGS\@;$(PTHREAD_LDFLAGS);' \
-	   -e 's;\@USE_NLS\@;$(USE_NLS);' \
+	   -e 's;\@ENABLE_NLS\@;$(ENABLE_NLS);' \
 	   -e 's;\@EBCONF_INTLINCS\@;$(EBCONF_INTLINCS);' \
 	   -e 's;\@EBCONF_INTLLIBS\@;$(EBCONF_INTLLIBS);' \
+	   -e 's;\@ENABLE_EBNET\@;$(ENABLE_EBNET);' \
 	   $(srcdir)/$@.in > $@.tmp
 	cp $@.tmp $@
 	chmod 644 $@

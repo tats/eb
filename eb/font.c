@@ -1,16 +1,29 @@
 /*
- * Copyright (c) 1997, 98, 99, 2000, 01  
- *    Motoyuki Kasahara
+ * Copyright (c) 1997-2006  Motoyuki Kasahara
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the project nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include "build-pre.h"
@@ -23,8 +36,7 @@
  * Initialize all fonts in the current subbook.
  */
 void
-eb_initialize_fonts(book)
-    EB_Book *book;
+eb_initialize_fonts(EB_Book *book)
 {
     EB_Subbook *subbook;
     EB_Font *font;
@@ -40,6 +52,7 @@ eb_initialize_fonts(book)
 	font->start = -1;
 	font->end = -1;
 	font->page = 0;
+	font->glyphs = NULL;
 	zio_initialize(&font->zio);
     }
 
@@ -49,6 +62,7 @@ eb_initialize_fonts(book)
 	font->start = -1;
 	font->end = -1;
 	font->page = 0;
+	font->glyphs = NULL;
 	zio_initialize(&font->zio);
     }
 
@@ -60,18 +74,51 @@ eb_initialize_fonts(book)
  * Load font files.
  */
 void
-eb_load_fonts(book)
-    EB_Book *book;
+eb_load_font_headers(EB_Book *book)
 {
-    int i;
+    EB_Error_Code error_code;
+    EB_Subbook *subbook;
+    EB_Font_Code i;
 
     LOG(("in: eb_load_fonts(book=%d)", (int)book->code));
 
-    for (i = 0; i < EB_MAX_FONTS; i++)
-	 eb_set_font(book, i);
-    eb_unset_font(book);
+    subbook = book->subbook_current;
 
-    LOG(("out: eb_load_fonts()"));
+    /*
+     * Load narrow font headers.
+     */
+    for (i = 0; i < EB_MAX_FONTS; i++) {
+	if (subbook->narrow_fonts[i].font_code == EB_FONT_INVALID
+	    || subbook->narrow_fonts[i].initialized)
+	    continue;
+
+	error_code = eb_open_narrow_font_file(book, i);
+	if (error_code == EB_SUCCESS)
+	    error_code = eb_load_narrow_font_header(book, i);
+	if (error_code != EB_SUCCESS)
+	    subbook->narrow_fonts[i].font_code = EB_FONT_INVALID;
+	subbook->narrow_fonts[i].initialized = 1;
+	zio_close(&subbook->narrow_fonts[i].zio);
+    }
+
+    /*
+     * Load wide font header.
+     */
+    for (i = 0; i < EB_MAX_FONTS; i++) {
+	if (subbook->wide_fonts[i].font_code == EB_FONT_INVALID
+	    || subbook->wide_fonts[i].initialized)
+	    continue;
+
+	error_code = eb_open_wide_font_file(book, i);
+	if (error_code == EB_SUCCESS)
+	    error_code = eb_load_wide_font_header(book, i);
+	if (error_code != EB_SUCCESS)
+	    subbook->wide_fonts[i].font_code = EB_FONT_INVALID;
+	subbook->wide_fonts[i].initialized = 1;
+	zio_close(&subbook->wide_fonts[i].zio);
+    }
+
+    LOG(("out: eb_load_font_headers()"));
 }
 
 
@@ -79,8 +126,7 @@ eb_load_fonts(book)
  * Finalize all fonts in the current subbook.
  */
 void
-eb_finalize_fonts(book)
-    EB_Book *book;
+eb_finalize_fonts(EB_Book *book)
 {
     EB_Subbook *subbook;
     EB_Font *font;
@@ -90,11 +136,21 @@ eb_finalize_fonts(book)
 
     subbook = book->subbook_current;
 
-    for (i = 0, font = subbook->narrow_fonts; i < EB_MAX_FONTS; i++, font++)
+    for (i = 0, font = subbook->narrow_fonts; i < EB_MAX_FONTS; i++, font++) {
 	zio_finalize(&font->zio);
+	if (font->glyphs != NULL) {
+	    free(font->glyphs);
+	    font->glyphs = NULL;
+	}
+    }
 
-    for (i = 0, font = subbook->wide_fonts; i < EB_MAX_FONTS; i++, font++)
+    for (i = 0, font = subbook->wide_fonts; i < EB_MAX_FONTS; i++, font++) {
 	zio_finalize(&font->zio);
+	if (font->glyphs != NULL) {
+	    free(font->glyphs);
+	    font->glyphs = NULL;
+	}
+    }
 
     LOG(("out: eb_finalize_fonts()"));
 }
@@ -105,9 +161,7 @@ eb_finalize_fonts(book)
  * `book'.
  */
 EB_Error_Code
-eb_font(book, font_code)
-    EB_Book *book;
-    EB_Font_Code *font_code;
+eb_font(EB_Book *book, EB_Font_Code *font_code)
 {
     EB_Error_Code error_code;
 
@@ -156,9 +210,7 @@ eb_font(book, font_code)
  * subbook in `book'.
  */
 EB_Error_Code
-eb_set_font(book, font_code)
-    EB_Book *book;
-    EB_Font_Code font_code;
+eb_set_font(EB_Book *book, EB_Font_Code font_code)
 {
     EB_Error_Code error_code;
     EB_Subbook *subbook;
@@ -220,15 +272,26 @@ eb_set_font(book, font_code)
      * Initialize current font informtaion.
      */
     if (subbook->narrow_current != NULL) {
-	error_code = eb_load_narrow_font(book);
+	error_code = eb_open_narrow_font_file(book, font_code);
 	if (error_code != EB_SUCCESS)
 	    goto failed;
+	if (is_ebnet_url(book->path)) {
+	    error_code = eb_load_narrow_font_glyphs(book, font_code);
+	    if (error_code != EB_SUCCESS)
+		goto failed;
+	}
     }
     if (subbook->wide_current != NULL) {
-	error_code = eb_load_wide_font(book);
+	error_code = eb_open_wide_font_file(book, font_code);
 	if (error_code != EB_SUCCESS)
 	    goto failed;
+	if (is_ebnet_url(book->path)) {
+	    error_code = eb_load_wide_font_glyphs(book, font_code);
+	    if (error_code != EB_SUCCESS)
+		goto failed;
+	}
     }
+
 
   succeeded:
     LOG(("out: eb_set_font() = %s", eb_error_string(EB_SUCCESS)));
@@ -250,31 +313,40 @@ eb_set_font(book, font_code)
  * Unset the font in the current subbook in `book'.
  */
 void
-eb_unset_font(book)
-    EB_Book *book;
+eb_unset_font(EB_Book *book)
 {
+    EB_Subbook *subbook;
+
     eb_lock(&book->lock);
     LOG(("in: eb_unset_font(book=%d)", (int)book->code));
 
-    /*
-     * Current subbook must have been set.
-     */
-    if (book->subbook_current != NULL) {
-	/*
-	 * Close font files if the book is EPWING and font files are
-	 * opened.
-	 */
-	if (book->disc_code == EB_DISC_EPWING) {
-	    if (book->subbook_current->narrow_current != NULL)
-		zio_close(&book->subbook_current->narrow_current->zio);
-	    if (book->subbook_current->wide_current != NULL)
-		zio_close(&book->subbook_current->wide_current->zio);
-	}
+    subbook = book->subbook_current;
 
-	book->subbook_current->narrow_current = NULL;
-	book->subbook_current->wide_current = NULL;
+    if (subbook == NULL)
+	goto succeeded;
+
+    /*
+     * Close font files.
+     */
+    if (subbook->narrow_current != NULL) {
+	zio_close(&subbook->narrow_current->zio);
+	if (subbook->narrow_current->glyphs != NULL) {
+	    free(subbook->narrow_current->glyphs);
+	    subbook->narrow_current->glyphs = NULL;
+	}
+    }
+    if (subbook->wide_current != NULL) {
+	zio_close(&subbook->wide_current->zio);
+	if (subbook->wide_current->glyphs != NULL) {
+	    free(subbook->wide_current->glyphs);
+	    subbook->wide_current->glyphs = NULL;
+	}
     }
 
+    book->subbook_current->narrow_current = NULL;
+    book->subbook_current->wide_current = NULL;
+
+  succeeded:
     LOG(("out: eb_unset_font()"));
     eb_unlock(&book->lock);
 }
@@ -284,10 +356,7 @@ eb_unset_font(book)
  * Make a list of fonts in the current subbook in `book'.
  */
 EB_Error_Code
-eb_font_list(book, font_list, font_count)
-    EB_Book *book;
-    EB_Font_Code *font_list;
-    int *font_count;
+eb_font_list(EB_Book *book, EB_Font_Code *font_list, int *font_count)
 {
     EB_Error_Code error_code;
     EB_Subbook *subbook;
@@ -341,9 +410,7 @@ eb_font_list(book, font_list, font_count)
  * `font_code' or not.
  */
 int
-eb_have_font(book, font_code)
-    EB_Book *book;
-    EB_Font_Code font_code;
+eb_have_font(EB_Book *book, EB_Font_Code font_code)
 {
     EB_Subbook *subbook;
 
@@ -367,7 +434,7 @@ eb_have_font(book, font_code)
     if (subbook->narrow_fonts[font_code].font_code == EB_FONT_INVALID
 	&& subbook->wide_fonts[font_code].font_code == EB_FONT_INVALID)
 	goto failed;
-    
+
     LOG(("out: eb_have_font() = %d", 1));
     eb_unlock(&book->lock);
 
@@ -387,9 +454,7 @@ eb_have_font(book, font_code)
  * Get height of the font `font_code' in the current subbook of `book'.
  */
 EB_Error_Code
-eb_font_height(book, height)
-    EB_Book *book;
-    int *height;
+eb_font_height(EB_Book *book, int *height)
 {
     EB_Error_Code error_code;
     EB_Font_Code font_code;
@@ -441,13 +506,11 @@ eb_font_height(book, height)
 }
 
 
-/* 
+/*
  * Get height of the font `font_code'.
  */
 EB_Error_Code
-eb_font_height2(font_code, height)
-    EB_Font_Code font_code;
-    int *height;
+eb_font_height2(EB_Font_Code font_code, int *height)
 {
     EB_Error_Code error_code;
 

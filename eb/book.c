@@ -1,22 +1,38 @@
 /*
- * Copyright (c) 1997, 98, 99, 2000, 01  
- *    Motoyuki Kasahara
+ * Copyright (c) 1997-2006  Motoyuki Kasahara
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the project nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include "build-pre.h"
 #include "eb.h"
 #include "error.h"
 #include "font.h"
+#ifdef ENABLE_EBNET
+#include "ebnet.h"
+#endif
 #include "build-post.h"
 
 /*
@@ -34,19 +50,21 @@ static pthread_mutex_t book_counter_mutex = PTHREAD_MUTEX_INITIALIZER;
 /*
  * Unexported functions.
  */
-static void eb_fix_misleaded_book EB_P((EB_Book *));
-static EB_Error_Code eb_load_catalog EB_P((EB_Book *));
-static EB_Error_Code eb_load_catalog_eb EB_P((EB_Book *, const char *));
-static EB_Error_Code eb_load_catalog_epwing EB_P((EB_Book *, const char *));
-static void eb_load_language EB_P((EB_Book *));
-static Zio_Code eb_get_hint_zio_code EB_P((int));
+static void eb_fix_misleaded_book(EB_Book *book);
+static EB_Error_Code eb_load_catalog(EB_Book *book);
+static EB_Error_Code eb_load_catalog_eb(EB_Book *book,
+    const char *catalog_path);
+static EB_Error_Code eb_load_catalog_epwing(EB_Book *book,
+    const char *catalog_path);
+static Zio_Code eb_get_hint_zio_code(int catalog_hint_value);
+static void eb_load_language(EB_Book *book);
+
 
 /*
  * Initialize `book'.
  */
 void
-eb_initialize_book(book)
-    EB_Book *book;
+eb_initialize_book(EB_Book *book)
 {
     LOG(("in: eb_initialize_book()"));
 
@@ -57,6 +75,9 @@ eb_initialize_book(book)
     book->path_length = 0;
     book->subbooks = NULL;
     book->subbook_current = NULL;
+#ifdef ENABLE_EBNET
+    book->ebnet_file = -1;
+#endif
     eb_initialize_text_context(book);
     eb_initialize_binary_context(book);
     eb_initialize_search_contexts(book);
@@ -71,12 +92,11 @@ eb_initialize_book(book)
  * Bind `book' to `path'.
  */
 EB_Error_Code
-eb_bind(book, path)
-    EB_Book *book;
-    const char *path;
+eb_bind(EB_Book *book, const char *path)
 {
     EB_Error_Code error_code;
     char temporary_path[EB_MAX_PATH_LENGTH + 1];
+    int is_ebnet;
 
     eb_lock(&book->lock);
     LOG(("in: eb_bind(path=%s)", path));
@@ -95,7 +115,18 @@ eb_bind(book, path)
     pthread_mutex_lock(&book_counter_mutex);
     book->code = book_counter++;
     pthread_mutex_unlock(&book_counter_mutex);
-    
+
+    /*
+     * Check whether `path' is URL.
+     */
+    is_ebnet = is_ebnet_url(path);
+#ifndef ENABLE_EBNET
+    if (is_ebnet) {
+	error_code = EB_ERR_EBNET_UNSUPPORTED;
+	goto failed;
+    }
+#endif
+
     /*
      * Set the path of the book.
      * The length of the file name "<path>/subdir/subsubdir/file.ebz;1" must
@@ -106,14 +137,20 @@ eb_bind(book, path)
 	goto failed;
     }
     strcpy(temporary_path, path);
+#ifdef ENABLE_EBNET
+    if (is_ebnet)
+	error_code = ebnet_canonicalize_url(temporary_path);
+    else
+	error_code = eb_canonicalize_path_name(temporary_path);
+#else
     error_code = eb_canonicalize_path_name(temporary_path);
+#endif
     if (error_code != EB_SUCCESS)
 	goto failed;
 
     book->path_length = strlen(temporary_path);
     if (EB_MAX_PATH_LENGTH
-	< book->path_length + 1 + EB_MAX_DIRECTORY_NAME_LENGTH + 1
-	+ EB_MAX_DIRECTORY_NAME_LENGTH + 1 + EB_MAX_FILE_NAME_LENGTH) {
+	< book->path_length + 1 + EB_MAX_RELATIVE_PATH_LENGTH) {
 	error_code = EB_ERR_TOO_LONG_FILE_NAME;
 	goto failed;
     }
@@ -124,6 +161,17 @@ eb_bind(book, path)
 	goto failed;
     }
     strcpy(book->path, temporary_path);
+
+    /*
+     * Establish a connection with a ebnet server.
+     */
+#ifdef ENABLE_EBNET
+    if (is_ebnet) {
+	error_code = ebnet_bind(book, book->path);
+	if (error_code != EB_SUCCESS)
+	    goto failed;
+    }
+#endif
 
     /*
      * Read information from the `LANGUAGE' file.
@@ -158,21 +206,11 @@ eb_bind(book, path)
  * Finish using `book'.
  */
 void
-eb_finalize_book(book)
-    EB_Book *book;
+eb_finalize_book(EB_Book *book)
 {
     LOG(("in: eb_finalize_book(book=%d)", (int)book->code));
 
     eb_unset_subbook(book);
-
-    if (book->path != NULL)
-	free(book->path);
-
-    book->code = EB_BOOK_NONE;
-    book->disc_code = EB_DISC_INVALID;
-    book->character_code = EB_CHARCODE_INVALID;
-    book->path = NULL;
-    book->path_length = 0;
 
     if (book->subbooks != NULL) {
 	eb_finalize_subbooks(book);
@@ -186,7 +224,19 @@ eb_finalize_book(book)
     eb_finalize_search_contexts(book);
     eb_finalize_binary_context(book);
     eb_finalize_lock(&book->lock);
-    eb_finalize_lock(&book->lock);
+
+#ifdef ENABLE_EBNET
+    ebnet_finalize_book(book);
+#endif
+
+    if (book->path != NULL)
+	free(book->path);
+
+    book->code = EB_BOOK_NONE;
+    book->disc_code = EB_DISC_INVALID;
+    book->character_code = EB_CHARCODE_INVALID;
+    book->path = NULL;
+    book->path_length = 0;
 
     LOG(("out: eb_finalize_book()"));
 }
@@ -212,6 +262,10 @@ static const char * const misleaded_book_table[] = {
 
     /* Nichi-Ei-Futsu Jiten (YRRS-059) */
     "#E#N#G!?#J#A#N!J!\\#F#R#E!K",
+
+    /* Japanese-English-Spanish Jiten (YRRS-060) */
+    "#E#N#G!?#J#A#N!J!\\#S#P#A!K",
+
     NULL
 };
 
@@ -219,8 +273,7 @@ static const char * const misleaded_book_table[] = {
  * Fix chachacter-code of the book if misleaded.
  */
 static void
-eb_fix_misleaded_book(book)
-    EB_Book *book;
+eb_fix_misleaded_book(EB_Book *book)
 {
     const char * const * misleaded;
     EB_Subbook *subbook;
@@ -247,8 +300,7 @@ eb_fix_misleaded_book(book)
  * Return EB_SUCCESS if it succeeds, error-code otherwise.
  */
 static EB_Error_Code
-eb_load_catalog(book)
-    EB_Book *book;
+eb_load_catalog(EB_Book *book)
 {
     EB_Error_Code error_code;
     char catalog_file_name[EB_MAX_FILE_NAME_LENGTH + 1];
@@ -307,9 +359,7 @@ eb_load_catalog(book)
  * Read information from the `CATALOG' file in 'book'. (EB)
  */
 static EB_Error_Code
-eb_load_catalog_eb(book, catalog_path)
-    EB_Book *book;
-    const char *catalog_path;
+eb_load_catalog_eb(EB_Book *book, const char *catalog_path)
 {
     EB_Error_Code error_code;
     char buffer[EB_SIZE_PAGE];
@@ -434,9 +484,7 @@ eb_load_catalog_eb(book, catalog_path)
  * Read information from the `CATALOGS' file in 'book'. (EPWING)
  */
 static EB_Error_Code
-eb_load_catalog_epwing(book, catalog_path)
-    EB_Book *book;
-    const char *catalog_path;
+eb_load_catalog_epwing(EB_Book *book, const char *catalog_path)
 {
     EB_Error_Code error_code;
     char buffer[EB_SIZE_PAGE];
@@ -446,6 +494,7 @@ eb_load_catalog_epwing(book, catalog_path)
     EB_Font *font;
     Zio zio;
     Zio_Code zio_code;
+    int epwing_version;
     int data_types;
     int i, j;
 
@@ -480,6 +529,9 @@ eb_load_catalog_epwing(book, catalog_path)
 	error_code = EB_ERR_UNEXP_CAT;
 	goto failed;
     }
+
+    epwing_version = eb_uint2(buffer + 2);
+    LOG(("aux: eb_load_catalog_epwing(): epwing_version=%d", epwing_version));
 
     /*
      * Allocate memories for subbook entries.
@@ -597,17 +649,25 @@ eb_load_catalog_epwing(book, catalog_path)
 	subbook->sound_hint_zio_code = ZIO_PLAIN;
     }
 
+    if (epwing_version == 1)
+	goto succeeded;
+
     /*
-     * Read extended information about subbook.
+     * Read extra information about subbook.
      */
     for (i = 0, subbook = book->subbooks; i < book->subbook_count;
 	 i++, subbook++) {
 	/*
 	 * Read data from the catalog file.
+	 *
+	 * We don't complain about unexpected EOF.  In that case, we
+	 * return EB_SUCCESS.
 	 */
-	if (zio_read(&zio, buffer, EB_SIZE_EPWING_CATALOG)
-	    != EB_SIZE_EPWING_CATALOG) {
+	ssize_t read_result = zio_read(&zio, buffer, EB_SIZE_EPWING_CATALOG);
+	if (read_result < 0) {
 	    error_code = EB_ERR_FAIL_READ_CAT;
+	    goto failed;
+	} else if (read_result != EB_SIZE_EPWING_CATALOG) {
 	    break;
 	}
 	if (*(buffer + 4) == '\0')
@@ -616,6 +676,7 @@ eb_load_catalog_epwing(book, catalog_path)
 	/*
 	 * Set a text file name and its compression hint.
 	 */
+	*(subbook->text_file_name) = '\0';
 	strncpy(subbook->text_file_name,
 	    buffer + 4, EB_MAX_DIRECTORY_NAME_LENGTH);
 	subbook->text_file_name[EB_MAX_DIRECTORY_NAME_LENGTH] = '\0';
@@ -634,6 +695,7 @@ eb_load_catalog_epwing(book, catalog_path)
 	/*
 	 * Set a graphic file name and its compression hint.
 	 */
+	*(subbook->graphic_file_name) = '\0';
 	if ((data_types & 0x03) == 0x02) {
 	    strncpy(subbook->graphic_file_name, buffer + 44,
 		EB_MAX_DIRECTORY_NAME_LENGTH);
@@ -662,6 +724,7 @@ eb_load_catalog_epwing(book, catalog_path)
 	/*
 	 * Set a sound file name and its compression hint.
 	 */
+	*(subbook->sound_file_name) = '\0';
 	if ((data_types & 0x03) == 0x01) {
 	    strncpy(subbook->sound_file_name, buffer + 44,
 		EB_MAX_DIRECTORY_NAME_LENGTH);
@@ -691,6 +754,7 @@ eb_load_catalog_epwing(book, catalog_path)
     /*
      * Close the catalog file.
      */
+  succeeded:
     zio_close(&zio);
     zio_finalize(&zio);
 
@@ -712,9 +776,9 @@ eb_load_catalog_epwing(book, catalog_path)
     return error_code;
 }
 
+
 static Zio_Code
-eb_get_hint_zio_code(catalog_hint_value)
-    int catalog_hint_value;
+eb_get_hint_zio_code(int catalog_hint_value)
 {
     switch (catalog_hint_value) {
     case 0x00:
@@ -736,8 +800,7 @@ eb_get_hint_zio_code(catalog_hint_value)
  * Read information from the `LANGUAGE' file in `book'.
  */
 static void
-eb_load_language(book)
-    EB_Book *book;
+eb_load_language(EB_Book *book)
 {
     Zio zio;
     Zio_Code zio_code;
@@ -795,8 +858,7 @@ eb_load_language(book)
  * Test whether `book' is bound.
  */
 int
-eb_is_bound(book)
-    EB_Book *book;
+eb_is_bound(EB_Book *book)
 {
     int is_bound;
 
@@ -819,9 +881,7 @@ eb_is_bound(book)
  * Return the bound path of `book'.
  */
 EB_Error_Code
-eb_path(book, path)
-    EB_Book *book;
-    char *path;
+eb_path(EB_Book *book, char *path)
 {
     EB_Error_Code error_code;
 
@@ -861,9 +921,7 @@ eb_path(book, path)
  * Inspect a disc type.
  */
 EB_Error_Code
-eb_disc_type(book, disc_code)
-    EB_Book *book;
-    EB_Disc_Code *disc_code;
+eb_disc_type(EB_Book *book, EB_Disc_Code *disc_code)
 {
     EB_Error_Code error_code;
 
@@ -904,9 +962,7 @@ eb_disc_type(book, disc_code)
  * Inspect a character code used in the book.
  */
 EB_Error_Code
-eb_character_code(book, character_code)
-    EB_Book *book;
-    EB_Character_Code *character_code;
+eb_character_code(EB_Book *book, EB_Character_Code *character_code)
 {
     EB_Error_Code error_code;
 
