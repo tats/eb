@@ -1,3 +1,52 @@
+Major changes in release 3.3.2.
+
+* Fix version number of the shared library.
+* Support for Nichi-Ei-Futsu Jiten (YRRS-059).
+
+Major changes in release 3.3.1.
+
+* Support for EPWING Geinus Eiwa Daijiten.
+* Fix a bug in handling of multi-search.
+* Fix a bug of debug mode.
+
+Major changes in release 3.3.
+
+* Fix a bug of eb_read_binary_mpeg().
+
+Major changes in release 3.3beta3.
+
+* Fix multi search.
+* Fix some minor bugs.
+
+Major changes in release 3.3beta2.
+
+* Fix some serious and minor bugs.
+* Install `eb3.m4' in `$(datadir)/aclocal'.
+
+Major changes in release 3.3beta1.
+
+* Fix some bugs.
+
+Major changes in release 3.3beta0.
+
+* Revise file name and compression type detection codes for EPWING.
+* The eb_multi_title() function is added, which gets a title of the
+  specified multi search.
+  Using this function, the `ebinfo' command also outputs multi search
+  titles when `--multi-search' (or `-m') option is specified.
+* Fix a bug of `ebrefile'.
+* Add two text hooks for inline image support.
+
+Major changes in release 3.2.3.
+
+* Fix a bug in handling of PCM sound data.
+* Add two text hooks.
+
+Major changes in release 3.2.2.
+
+* Fix bug in handling of appendix.
+* Fix gettext message catalogs.
+
 Major changes in release 3.2.1.
 
 * Fix a bug in text read routine.

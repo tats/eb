@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 98, 2000, 01
+ * Copyright (c) 1997, 98, 2000, 01, 02
  *    Motoyuki Kasahara
  *
  * This program is free software; you can redistribute it and/or modify
@@ -55,6 +55,8 @@ eb_initialize_appendix_subbooks(appendix)
 	subbook->wide_end = -1;
 	subbook->narrow_page = 0;
 	subbook->wide_page = 0;
+	subbook->stop_code0 = 0;
+	subbook->stop_code1 = 0;
 	zio_initialize(&subbook->zio);
     }
 
@@ -139,37 +141,40 @@ eb_load_appendix_subbook(appendix)
 	error_code = EB_ERR_FAIL_READ_APP;
 	goto failed;
     }
-
     character_count = eb_uint2(buffer + 12);
-    subbook->narrow_page = eb_uint4(buffer);
-    subbook->narrow_start = eb_uint2(buffer + 10);
-    if (subbook->character_code == EB_CHARCODE_ISO8859_1) {
-	subbook->narrow_end = subbook->narrow_start
-	    + ((character_count / 0xfe) << 8) + (character_count % 0xfe) - 1;
-	if (0xfe < (subbook->narrow_end & 0xff))
-	    subbook->narrow_end += 3;
-    } else {
-	subbook->narrow_end = subbook->narrow_start
-	    + ((character_count / 0x5e) << 8) + (character_count % 0x5e) - 1;
-	if (0x7e < (subbook->narrow_end & 0xff))
-	    subbook->narrow_end += 0xa3;
-    }
 
-    if (subbook->character_code == EB_CHARCODE_ISO8859_1) {
-	if ((subbook->narrow_start & 0xff) < 0x01
-	    || 0xfe < (subbook->narrow_start & 0xff)
-	    || subbook->narrow_start < 0x0001
-	    || 0x1efe < subbook->narrow_end) {
-	    error_code = EB_ERR_UNEXP_APP;
-	    goto failed;
-	}
-    } else {
-	if ((subbook->narrow_start & 0xff) < 0x21
-	    || 0x7e < (subbook->narrow_start & 0xff)
-	    || subbook->narrow_start < 0xa121
-	    || 0xfe7e < subbook->narrow_end) {
-	    error_code = EB_ERR_UNEXP_APP;
-	    goto failed;
+    if (0 < character_count) {
+	subbook->narrow_page = eb_uint4(buffer);
+	subbook->narrow_start = eb_uint2(buffer + 10);
+
+	if (subbook->character_code == EB_CHARCODE_ISO8859_1) {
+	    subbook->narrow_end = subbook->narrow_start
+		+ ((character_count / 0xfe) << 8) + (character_count % 0xfe)
+		- 1;
+	    if (0xfe < (subbook->narrow_end & 0xff))
+		subbook->narrow_end += 3;
+
+	    if ((subbook->narrow_start & 0xff) < 0x01
+		|| 0xfe < (subbook->narrow_start & 0xff)
+		|| subbook->narrow_start < 0x0001
+		|| 0x1efe < subbook->narrow_end) {
+		error_code = EB_ERR_UNEXP_APP;
+		goto failed;
+	    }
+	} else {
+	    subbook->narrow_end = subbook->narrow_start
+		+ ((character_count / 0x5e) << 8) + (character_count % 0x5e)
+		- 1;
+	    if (0x7e < (subbook->narrow_end & 0xff))
+		subbook->narrow_end += 0xa3;
+
+	    if ((subbook->narrow_start & 0xff) < 0x21
+		|| 0x7e < (subbook->narrow_start & 0xff)
+		|| subbook->narrow_start < 0xa121
+		|| 0xfe7e < subbook->narrow_end) {
+		error_code = EB_ERR_UNEXP_APP;
+		goto failed;
+	    }
 	}
     }
 
@@ -180,37 +185,40 @@ eb_load_appendix_subbook(appendix)
 	error_code = EB_ERR_FAIL_READ_APP;
 	goto failed;
     }
-
     character_count = eb_uint2(buffer + 12);
-    subbook->wide_page = eb_uint4(buffer);
-    subbook->wide_start = eb_uint2(buffer + 10);
-    if (subbook->character_code == EB_CHARCODE_ISO8859_1) {
-	subbook->wide_end = subbook->wide_start
-	    + ((character_count / 0xfe) << 8) + (character_count % 0xfe) - 1;
-	if (0xfe < (subbook->wide_end & 0xff))
-	    subbook->wide_end += 3;
-    } else {
-	subbook->wide_end = subbook->wide_start
-	    + ((character_count / 0x5e) << 8) + (character_count % 0x5e) - 1;
-	if (0x7e < (subbook->wide_end & 0xff))
-	    subbook->wide_end += 0xa3;
-    }
+
+    if (0 < character_count) {
+	subbook->wide_page = eb_uint4(buffer);
+	subbook->wide_start = eb_uint2(buffer + 10);
+
+	if (subbook->character_code == EB_CHARCODE_ISO8859_1) {
+	    subbook->wide_end = subbook->wide_start
+		+ ((character_count / 0xfe) << 8) + (character_count % 0xfe)
+		- 1;
+	    if (0xfe < (subbook->wide_end & 0xff))
+		subbook->wide_end += 3;
+
+	    if ((subbook->wide_start & 0xff) < 0x01
+		|| 0xfe < (subbook->wide_start & 0xff)
+		|| subbook->wide_start < 0x0001
+		|| 0x1efe < subbook->wide_end) {
+		error_code = EB_ERR_UNEXP_APP;
+		goto failed;
+	    }
+	} else {
+	    subbook->wide_end = subbook->wide_start
+		+ ((character_count / 0x5e) << 8) + (character_count % 0x5e)
+		- 1;
+	    if (0x7e < (subbook->wide_end & 0xff))
+		subbook->wide_end += 0xa3;
     
-    if (subbook->character_code == EB_CHARCODE_ISO8859_1) {
-	if ((subbook->wide_start & 0xff) < 0x01
-	    || 0xfe < (subbook->wide_start & 0xff)
-	    || subbook->wide_start < 0x0001
-	    || 0x1efe < subbook->wide_end) {
-	    error_code = EB_ERR_UNEXP_APP;
-	    goto failed;
-	}
-    } else {
-	if ((subbook->wide_start & 0xff) < 0x21
-	    || 0x7e < (subbook->wide_start & 0xff)
-	    || subbook->wide_start < 0xa121
-	    || 0xfe7e < subbook->wide_end) {
-	    error_code = EB_ERR_UNEXP_APP;
-	    goto failed;
+	    if ((subbook->wide_start & 0xff) < 0x21
+		|| 0x7e < (subbook->wide_start & 0xff)
+		|| subbook->wide_start < 0xa121
+		|| 0xfe7e < subbook->wide_end) {
+		error_code = EB_ERR_UNEXP_APP;
+		goto failed;
+	    }
 	}
     }
 
@@ -222,21 +230,20 @@ eb_load_appendix_subbook(appendix)
 	goto failed;
     }
     stop_code_page = eb_uint4(buffer);
-    if (zio_lseek(&subbook->zio, (off_t)(stop_code_page - 1) * EB_SIZE_PAGE,
-	SEEK_SET) < 0) {
-	error_code = EB_ERR_FAIL_SEEK_APP;
-	goto failed;
-    }
-    if (zio_read(&subbook->zio, buffer, 16) != 16) {
-	error_code = EB_ERR_FAIL_READ_APP;
-	goto failed;
-    }
-    if (eb_uint2(buffer) != 0) {
-	subbook->stop_code0 = eb_uint2(buffer + 2);
-	subbook->stop_code1 = eb_uint2(buffer + 4);
-    } else {
-	subbook->stop_code0 = 0;
-	subbook->stop_code1 = 0;
+    if (0 < stop_code_page) {
+	if (zio_lseek(&subbook->zio,
+	    (off_t)(stop_code_page - 1) * EB_SIZE_PAGE, SEEK_SET) < 0) {
+	    error_code = EB_ERR_FAIL_SEEK_APP;
+	    goto failed;
+	}
+	if (zio_read(&subbook->zio, buffer, 16) != 16) {
+	    error_code = EB_ERR_FAIL_READ_APP;
+	    goto failed;
+	}
+	if (eb_uint2(buffer) != 0) {
+	    subbook->stop_code0 = eb_uint2(buffer + 2);
+	    subbook->stop_code1 = eb_uint2(buffer + 4);
+	}
     }
 
     /*
@@ -594,7 +601,9 @@ eb_set_appendix_subbook(appendix, subbook_code)
      * An error occurs...
      */
   failed:
-    eb_unset_appendix_subbook(appendix);
+    if (appendix->subbook_current != NULL)
+	zio_close(&appendix->subbook_current->zio);
+    appendix->subbook_current = NULL;
     LOG(("out: eb_set_appendix_subbook() = %s", eb_error_string(error_code)));
     eb_unlock(&appendix->lock);
     return error_code;
@@ -627,7 +636,7 @@ eb_set_appendix_subbook_eb(appendix, subbook_code)
      * Open an appendix file.
      */
     if (eb_find_file_name2(appendix->path, subbook->directory_name,
-	"appendix", subbook->file_name) != EB_SUCCESS) {
+	EB_FILE_NAME_APPENDIX, subbook->file_name) != EB_SUCCESS) {
 	error_code = EB_ERR_FAIL_OPEN_APP;
 	goto failed;
     }
@@ -649,7 +658,6 @@ eb_set_appendix_subbook_eb(appendix, subbook_code)
      * An error occurs...
      */
   failed:
-    eb_unset_appendix_subbook(appendix);
     LOG(("out: eb_set_appendix_subbook_eb() = %s",
 	eb_error_string(error_code)));
     return error_code;
@@ -691,7 +699,7 @@ eb_set_appendix_subbook_epwing(appendix, subbook_code)
      * Open an appendix file.
      */
     if (eb_find_file_name3(appendix->path, subbook->directory_name,
-	subbook->data_directory_name, "furoku", subbook->file_name)
+	subbook->data_directory_name, EB_FILE_NAME_FUROKU, subbook->file_name)
 	!= EB_SUCCESS) {
 	error_code = EB_ERR_FAIL_OPEN_APP;
 	goto failed;
@@ -716,7 +724,6 @@ eb_set_appendix_subbook_epwing(appendix, subbook_code)
      * An error occurs...
      */
   failed:
-    eb_unset_appendix_subbook(appendix);
     LOG(("out: eb_set_appendix_subbook_epwing() = %s",
 	eb_error_string(error_code)));
     return error_code;
