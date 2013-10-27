@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 1997, 1998  Motoyuki Kasahara
+ * Copyright (c) 1997, 98, 2000, 01  
+ *    Motoyuki Kasahara
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,27 +29,30 @@
 
 #include <sys/types.h>
 
-
+#ifndef VOID
 #ifdef __STDC__
 #define VOID void
 #else
 #define VOID char
+#endif
 #endif
 
 
 /*
  * memset() described in ISO 9899: 1990.
  */
-void *
-memset(str, c, len)
-    VOID *str;
-    int c;
-    size_t len;
+VOID *
+memset(stream, character, length)
+    VOID *stream;
+    int character;
+    size_t length;
 {
-    char *s = str;
+    unsigned char *s = (unsigned char *)stream;
+    unsigned char c = (unsigned char)character;
+    size_t i;
 
-    while (0 < len--)
+    for (i = 0; i < length; i++)
 	*s++ = c;
 
-    return str;
+    return stream;
 }

@@ -14,7 +14,7 @@
 @ifinfo
 ebzip: CD-ROM 書籍の圧縮と伸長のためのツール, 笠原基之
 
-Copyright @copyright{} 1998, 1999  Motoyuki Kasahara
+Copyright @copyright{} 1998, 99, 2000, 01  Motoyuki Kasahara
 
 Permission is granted to make and distribute verbatim copies of
 this manual provided the copyright notice and this permission notice
@@ -47,7 +47,7 @@ by Free Software Foundation, Inc.
 
 @page
 @vskip 0pt plus 1filll
-Copyright @copyright{} 1998, 1999  Motoyuki Kasahara
+Copyright @copyright{} 1998, 99, 2000, 01  Motoyuki Kasahara
 
 Permission is granted to make and distribute verbatim copies of
 this manual provided the copyright notice and this permission notice
@@ -90,17 +90,16 @@ EB ライブラリバージョン @value{VERSION} に対応しています。
 * Compression Example 1::       圧縮の実例 (1)
 * Compression Example 2::       圧縮の実例 (2)
 * Compression Level::           圧縮レベル
-* Adjust Filenames::            ファイル名の調整
 * Test::                        テスト
 * Partial Compression::         一部だけの圧縮
 * Overwrite Old Files::         古いファイルの上書き
-* Compress Compressed EPWING::  圧縮された EPWING の圧縮
+* Compress Compressed Book::    圧縮された書籍の圧縮
 
 伸長
 
 * Uncompression Example::       伸長の実例
 * Options for Uncompression::   伸長のオプション
-* Uncompress Compressed EPWING::  圧縮された EPWING の伸長
+* Uncompress Compressed Book::  圧縮された書籍の伸長
 
 情報出力
 
@@ -190,11 +189,11 @@ CD-ROM 書籍の出版社がハードディスク (および他の補助記憶装置) に書籍を
 @end example
 
 @noindent
-@code{ebunzip} という名前で起動された場合、デフォルトの動作は伸長にな
-ります。
-@code{ebzipinfo} という名前で起動された場合、デフォルトの動作は情報出
-力になります。
-それ以外の場合、デフォルトの動作は圧縮になります。
+@code{ebunzip} という名前で起動された場合、動作を指定しないときは、
+伸長を行います。
+@code{ebzipinfo} という名前で起動された場合、動作を指定しないときは、
+情報出力を行います。
+それ以外の場合、動作を指定しないと圧縮を行います。
 
 加えて、コマンドラインオプションでも動作を決定することができます。
 そのオプションとは @samp{--compress}(@samp{-z}) および
@@ -256,11 +255,10 @@ ebzipinfo --uncompress
 * Compression Example 1::       圧縮の実例 (1)
 * Compression Example 2::       圧縮の実例 (2)
 * Compression Level::           圧縮レベル
-* Adjust Filenames::            ファイル名の調整
 * Test::                        テスト
 * Partial Compression::         一部だけの圧縮
 * Overwrite Old Files::         古いファイルの上書き
-* Compress Compressed EPWING::  圧縮された EPWING の圧縮
+* Compress Compressed Book::    圧縮された書籍の圧縮
 @end menu
 
 @c -------------------------------------------------------------------
@@ -304,14 +302,14 @@ CD-ROM 書籍がすでに @file{/dict} にコピーされているものの、まだ圧縮
 
 @example
 @group
-==> compress /dict/kanji/start <==
-output to ./dict/kanji/start.ebz
- 1.0% done (2097152 / 220069888 bytes)
- 1.9% done (4194304 / 220069888 bytes)
- 2.9% done (6291456 / 220069888 bytes)
+==> /dict/kanji/start を圧縮 <==
+./dict/kanji/start.ebz に出力
+ 1.0% 処理済み (2097152 / 220069888 バイト)
+ 1.9% 処理済み (4194304 / 220069888 バイト)
+ 2.9% 処理済み (6291456 / 220069888 バイト)
         : (略)
-completed (220069888 / 220069888 bytes)
-220069888 -> 78163751 bytes (35.5%)
+完了 (220069888 / 220069888 バイト)
+220069888 -> 78163751 バイト (35.5%)
 @end group
 @end example
 
@@ -381,7 +379,7 @@ completed (220069888 / 220069888 bytes)
 出力側のディレクトリ @file{/dict} は空でも構いませんが、圧縮前にあらか
 じめ作っておかなければならないので、注意して下さい。
 この例では、@samp{--keep} オプションを使っています。
-デフォルトでは、@code{ebzip} は、圧縮後に元のファイルを削除しますが、
+特に指定しなければ、@code{ebzip} は、圧縮後に元のファイルを削除しますが、
 @samp{--keep} オプションはこの振る舞いを抑制します。
 
 @file{/dict} と @file{/cdrom} のディレクトリ構成はほとんど同じですが、
@@ -407,12 +405,12 @@ EB ライブラリが対応していないファイル、ディレクトリについては、
 @code{ebzip} は無視します。
 
 @c -------------------------------------------------------------------
-@node Compression Level, Adjust Filenames, Compression Example 2, Compression
+@node Compression Level, Test, Compression Example 2, Compression
 @section 圧縮レベル
 
-@code{ebzip} は、0、1、2、3 という 4 つの圧縮レベルを持っています。
+@code{ebzip} は、0 〜 5 という 6 つの圧縮レベルを持っています。
 圧縮レベル 0 は、圧縮・伸長が最も速いですが、圧縮率が最悪です。
-圧縮レベル 3 は、圧縮率が最良ですが、圧縮・伸長が最も遅くなります。
+圧縮レベル 5 は、圧縮率が最良ですが、圧縮・伸長が最も遅くなります。
 圧縮レベルは、@samp{--level} (@samp{-l}) オプションで設定します。
 
 @example
@@ -420,77 +418,10 @@ EB ライブラリが対応していないファイル、ディレクトリについては、
 @end example
 
 @noindent
-デフォルトのレベルは 0 (最も速いが圧縮率は最悪) です。
+無指定時のレベルは 0 (最も速いが圧縮率は最悪) です。
 
 @c -------------------------------------------------------------------
-@node Adjust Filenames, Test, Compression Level, Compression
-@section ファイル名の調整
-
-以前の例に戻ってみましょう。
-ここでもう一度、CD-ROM 書籍を @file{/dict} の下にコピーしたものの、ま
-だ圧縮していないと仮定します。
-ただし、以前の例と違って、@file{/dict} の下のファイルのファイル名と
-ディレクトリ名には大文字が使われ、ファイル名にはバージョン番号 @samp{;1}
-が付いています。
-
-@example
-@group
-/dict/CATALOG;1
-/dict/LANGUAGE;1
-/dict/GERMAN/START;1
-/dict/FRENCH/START;1
-/dict/ITALIAN/START;1
-@end group
-@end example
-
-@noindent
-@code{ebzip} による圧縮後は、次のようになります。
-
-@example
-@group
-/dict/CATALOG;1
-/dict/LANGUAGE.EBZ;1
-/dict/GERMAN/START.EBZ;1
-/dict/FRENCH/START.EBZ;1
-/dict/ITALIAN/START.EBZ;1
-@end group
-@end example
-
-@noindent
-@code{ebzip} は、@dfn{大文字・小文字の違い} (@dfn{case}) と
-@dfn{拡張子} (@dfn{suffix}) について、元と同じになるようにします。
-次の表は、@file{start} ファイルのファイル名がどのように変化するのかを
-示しています。
-
-@group
-@multitable @columnfractions .4 .3 .3
-@item 大文字・小文字/拡張子 @tab 圧縮前   @tab 圧縮後
-@item 小文字/なし           @tab start    @tab start.ebz
-@item 小文字/点             @tab start.   @tab start.ebz
-@item 小文字/バージョン     @tab start;1  @tab start.ebz;1
-@item 小文字/点とバージョン @tab start.;1 @tab start.ebz;1
-@item 大文字/なし           @tab START    @tab START.EBZ
-@item 大文字/点             @tab START.   @tab START.EBZ
-@item 大文字/バージョン     @tab START;1  @tab START.EBZ;1
-@item 大文字/点とバージョン @tab START.;1 @tab START.EBZ;1
-@end multitable
-@end group
-
-@samp{--case} と @samp{--suffix} オプションによって、出力側のファイ
-ル名の大文字・小文字の違いと拡張子を変えることができます。
-@samp{--case} オプションは引数を一つ取り、それは @samp{upper} か
-@samp{lower} でなくてはいけません。
-このオプションは、出力側のファイル名を大文字あるいは小文字になるよ
-うにします。
-
-同様に @samp{--suffix} オプションも引数を一つとり、それは
-@samp{none}、@samp{dot}、@samp{version}、@samp{both} のいずれかでなく
-てはいけません。
-このオプションは出力側のファイル名の拡張子を、「なし」「点」「バージョン」
-「両方」(点 + バージョン) になるようにします。
-
-@c -------------------------------------------------------------------
-@node Test, Partial Compression, Adjust Filenames, Compression
+@node Test, Partial Compression, Compression Level, Compression
 @section テスト
 
 @code{ebzip} を @code{--test} (@code{-t}) オプション付きで実行すると、
@@ -506,8 +437,8 @@ EB ライブラリが対応していないファイル、ディレクトリについては、
 @section 一部だけの圧縮
 
 なにも設定しないと、@code{ebzip} は書籍一冊の全体を圧縮しますが、
-@samp{--subbook} (@samp{-S}) オプションを使うと指定した副本 (subbook)
-だけを圧縮できます。
+@samp{--subbook} (@samp{-S}) や @samp{--skip-content} (@samp{-s})
+オプションを使うと一部だけを圧縮できます。
 
 @samp{--subbook} オプションは引数を一つ取り、そこにカンマ (@samp{,}) 
 で区切って、圧縮したい副本のディレクトリ名を並べて書きます。
@@ -517,39 +448,39 @@ EB ライブラリが対応していないファイル、ディレクトリについては、
 @example
 @group
 % ebinfo /mnt/cdrom
-disc type: EB/EBG/EBXA/EBXA-C/S-EBXA
-character code: JIS X 0208
-the number of subbooks: 3
-@end group
-
-@group
-subbook 1:
-  title: New English Japanese Dictionary (4th edition)
-  directory: ENGLISH
-  search methods: word endword keyword menu
-  font sizes: 16 24 30 48
-  narrow font characters: 0xa121 -- 0xa24e
-  wide font characters: 0xa321 -- 0xa27e
+ディスクの形式: EB/EBG/EBXA/EBXA-C/S-EBXA
+文字コード: JIS X 0208
+副本の数: 3
 
 @end group
 @group
-subbook 2:
-  title: CD-ROM French Japanese Dictionary (3rd edition)
-  directory: FRENCH
-  search methods: word endword keyword menu
-  font sizes: 16 24 30 48
-  narrow font characters: 
-  wide font characters: 0xa321 -- 0xa27e
+副本 1:
+  題名: 新英和辞典（第四版）
+  ディレクトリ: english
+  検索方式: 前方一致 後方一致 条件 メニュー
+  フォントの大きさ: 16 24 30 48
+  半角フォントの文字: 0xa121 -- 0xa24e
+  全角フォントの文字: 0xa321 -- 0xa27e
 
 @end group
 @group
-subbook 3:
-  title: Pocket German Japanese Dictionary (3rd edition)
-  directory: GERMAN
-  search methods: menu
-  font sizes: 16 24 30 48
-  narrow font characters: 
-  wide font characters: 0xa321 -- 0xa27e
+副本 2:
+  題名: CD-ROM 仏和辞典（第三版）
+  ディレクトリ: french
+  検索方式: 前方一致 後方一致 条件 メニュー
+  フォントの大きさ: 16 24 30 48
+  半角フォントの文字: 
+  全角フォントの文字: 0xa321 -- 0xa27e
+
+@end group
+@group
+副本 3:
+  題名: ポケット独和辞典（第三版）
+  ディレクトリ: german
+  検索方式: メニュー
+  フォントの大きさ: 16 24 30 48
+  半角フォントの文字: 
+  全角フォントの文字: 0xa321 -- 0xa27e
 @end group
 @end example
 
@@ -558,9 +489,9 @@ subbook 3:
 @pxref{Invoking ebinfo, , @code{ebinfo} の実行, ebinfo-ja, ebinfo-ja})。
 @*
 この例では、3 つの副本が書籍には含まれており、それらのディレクトリ名は
-@code{ENGLISH}, @code{FRENCH}, @code{GERMAN} だということが分かります。
+@code{english}, @code{french}, @code{german} だということが分かります。
 
-@code{ENGLISH} と @code{GERMAN} だけを圧縮するには、次のようにします。
+@code{english} と @code{german} だけを圧縮するには、次のようにします。
 
 @example
 % ebzip --subbook english,french /dict
@@ -575,7 +506,7 @@ subbook 3:
 @end example
 
 @noindent
-残りの副本 (この例では @code{GERMAN}) のファイルは圧縮されることもコピー
+残りの副本 (この例では @code{german}) のファイルは圧縮されることもコピー
 されることもありませんので、この時点ではまだこの書籍に対する圧縮の作業は
 完了していません。
 この書籍を使用するためには、さらなる操作を行って残りの副本を圧縮するか、
@@ -584,14 +515,24 @@ subbook 3:
 @pxref{Combination with ebzip, , @code{ebzip} との連携, ebrefile-ja, ebrefile-ja})。
 
 副本同士で、異なる圧縮レベルを設定することは可能です
-(たとえば、@code{EJDICT} と @code{HOWTO} はレベル 0 で圧縮し、@code{TOUR}
-はレベル 2 で圧縮する)。
+(たとえば、@code{english} と @code{french} はレベル 0 で圧縮し、
+@code{german} はレベル 2 で圧縮する)。
 
-@samp{--subbook} オプションの有無にかかわらず、@file{LANGUAGE} ファイ
-ルは常に圧縮されます。
+
+@samp{--skip-content} (@samp{-s}) は @samp{--subbook} に似ていますが、
+@samp{--skip-content} では無視するファイルのデータ型を指定します。
+
+@example
+% ebzip --skip-content sound,movie --subbook french /dict
+@end example
+
+@noindent
+この例では、@code{ebzip} は音声と動画ファイルを飛ばします。
+現在のところ、@code{ebzip} によって認識されるデータ型は、
+@code{font}、@code{graphic}、@code{sound}、@code{movie} です。
 
 @c -------------------------------------------------------------------
-@node Overwrite Old Files, Compress Compressed EPWING, Partial Compression, Compression
+@node Overwrite Old Files, Compress Compressed Book, Partial Compression, Compression
 @section 古いファイルの上書き
 
 書き込もうとしたファイルがすでに存在するとき、@code{ebzip} は上書きし
@@ -599,11 +540,11 @@ subbook 3:
 
 @example
 @group
-==> compress /dict/science/data/honmon <==
-output to /dict/science/data/honmon.ebz
+==> /dict/science/data/honmon を圧縮 <==
+/dict/science/data/honmon.ebz に出力
 
-the file already exists: /dict/science/data/honmon.ebz
-do you wish to overwrite (y or n)? 
+ファイルがすでに存在します: /dict/science/data/honmon.ebz
+上書きしますか (はい:y, いいえ:n)?
 @end group
 @end example
 
@@ -617,14 +558,22 @@ do you wish to overwrite (y or n)?
 確認なしにそのファイルを飛ばして次に進みます。
 
 @c -------------------------------------------------------------------
-@node Compress Compressed EPWING,  , Overwrite Old Files, Compression
-@section 圧縮された EPWING 書籍の圧縮
+@node Compress Compressed Book,  , Overwrite Old Files, Compression
+@section 圧縮された書籍の圧縮
 
-@code{ebzip} は EPWING 圧縮形式で圧縮された CD-ROM 書籍を圧縮すること
-ができます。
-@code{ebzip} は書籍を伸長してから、ebzip の圧縮形式で圧縮し直します。
-一般に ebzip の圧縮形式の方が EPWING 圧縮形式よりも良好なので、
-@code{ebzip} によって圧縮された書籍は元のものよりも小さくなります。
+S-EBXA および EPWING においても圧縮形式を定義しており、CD-ROM 書籍には
+これらの圧縮形式を実際に採用しているものがあります。
+これらの圧縮形式は、ebzip の圧縮形式とは異なるものです。
+
+@code{ebzip} は S-EBXA や EPWING 圧縮形式で圧縮された CD-ROM 書籍も伸長
+することができますが、圧縮することはできません。
+
+@code{ebzip} に対して、既に圧縮されている CD-ROM 書籍を圧縮するように
+命じると、@code{ebzip} はいったん書籍を伸長してから、ebzip の圧縮形式で
+圧縮し直します。
+
+一般に ebzip の圧縮形式の方が S-EBXA や EPWING の圧縮形式よりも圧縮率が
+良好です。
 
 @c ===================================================================
 @node Uncompression, Information, Compression, Top
@@ -636,7 +585,7 @@ do you wish to overwrite (y or n)?
 @menu
 * Uncompression Example::       伸長の実例
 * Options for Uncompression::   伸長のオプション
-* Uncompress Compressed EPWING::  圧縮された EPWING の伸長
+* Uncompress Compressed Book::  圧縮された書籍の伸長
 @end menu
 
 @c -------------------------------------------------------------------
@@ -678,14 +627,14 @@ do you wish to overwrite (y or n)?
 
 @example
 @group
-==> uncompress /dict/kanji/start.ebz <==
-output to ./kanji/start.ebz
- 5.1% done (4194304 / 82460672 bytes)
-10.2% done (8388608 / 82460672 bytes)
-15.3% done (12582912 / 82460672 bytes)
+==> /dict/kanji/start.ebz を伸長 <==
+./kanji/start.ebz に出力
+ 5.1% 処理済み (4194304 / 82460672 バイト)
+10.2% 処理済み (8388608 / 82460672 バイト)
+15.3% 処理済み (12582912 / 82460672 バイト)
         : (略)
-completed (82460672 / 82460672 bytes)
-25681439 -> 82460672 bytes
+完了 (82460672 / 82460672 バイト)
+25681439 -> 82460672 バイト
 @end group
 @end example
 
@@ -695,11 +644,11 @@ completed (82460672 / 82460672 bytes)
 
 @example
 @group
-==> uncompress /dict/kanji/start.ebz <==
-output to /dict/kanji/start
+==> /dict/kanji/start.ebz を伸長 <==
+/dict/kanji/start に出力
 
-the file already exists: /dict/kanji/start
-do you wish to overwrite (y or n)? 
+ファイルがすでに存在します: /dict/kanji/start
+上書きしますか (はい:y, いいえ:n)?
 @end group
 @end example
 
@@ -721,7 +670,7 @@ do you wish to overwrite (y or n)?
 拡張子 @samp{.ebz} が取り除かれています。
 
 @c -------------------------------------------------------------------
-@node Options for Uncompression, Uncompress Compressed EPWING, Uncompression Example, Uncompression
+@node Options for Uncompression, Uncompress Compressed Book, Uncompression Example, Uncompression
 @section 伸長のオプション
 
 多くのオプションは、圧縮時と伸長時とで同じ意味を持っています。
@@ -735,9 +684,9 @@ do you wish to overwrite (y or n)?
 利です
 (@samp{--test} オプションについての詳細は、@pxref{Test, , テスト})。
 
-@samp{--subbook} オプションを指定すると、指定した副本および @file{LANGUAGE}
-ファイルだけしか伸長しません
-(@samp{--subbook} オプションについての詳細は、
+@samp{--subbook} や @samp{--skip-content} オプションを指定すると、条件
+に合致したファイルだけしか伸長しません
+(これらのオプションについての詳細は、
 @pxref{Partial Compression, , 一部だけの圧縮})。
 
 @samp{--force-overwrite} や @samp{--no-overwrite} オプションを指定する
@@ -746,27 +695,19 @@ do you wish to overwrite (y or n)?
 (@samp{--force-overwrite} と @samp{--no-overwrite} オプションについての
 詳細は、@pxref{Overwrite Old Files, , 古いファイルの上書き})。
 
-何も設定しないと、伸長されたファイルのファイル名の大文字・小文字の違い
-や拡張子のスタイルは、圧縮ファイルのものと同じになります。
-@samp{--case} と @samp{--suffix} オプションによって、伸長されたファイ
-ルのファイル名の大文字・小文字の違いや拡張子のスタイルを修正することが
-できます
-(@samp{--case} と @samp{--suffix} オプションについての詳細は、
-@pxref{Adjust Filenames, , ファイル名の調整})。
-
 @code{ebunzip} は、@samp{--level} オプションを無視します。
 伸長時に @samp{--level} オプションを指定する必要はありません。
 
 @c -------------------------------------------------------------------
-@node Uncompress Compressed EPWING,  , Options for Uncompression, Uncompression
-@section 圧縮された EPWING CD-ROM 書籍の伸長
+@node Uncompress Compressed Book,  , Options for Uncompression, Uncompression
+@section 圧縮された書籍の伸長
 
-@code{ebzip} は EPWING 圧縮形式で圧縮された CD-ROM 書籍を伸長すること
-ができます。
-しかしながら、伸長した書籍を圧縮し直して、元の書籍を復元することはでき
-ません。
-言い換えると、@code{ebzip} は EPWING 圧縮形式の伸長には対応しています
-が、圧縮には対応していません。
+S-EBXA および EPWING では ebzip のものとは異なる圧縮形式を定義しており、
+CD-ROM 書籍にはこれらの圧縮形式を実際に採用しているものがあります。
+これらの圧縮形式は、ebzip の圧縮形式とは異なるものです。
+
+@code{ebzip} は S-EBXA や EPWING 圧縮形式で圧縮された CD-ROM 書籍も伸長
+することができますが、圧縮することはできません。
 
 @c ===================================================================
 @node Information, Delete a Book, Uncompression, Top
@@ -798,19 +739,17 @@ do you wish to overwrite (y or n)?
 @example
 @group
 ==> /dict/spanish/spanish/start.ebz <==
-compressed: 154290176 -> 54881862 bytes (35.6%)
-compresssion level: 0
+154290176 -> 54881862 バイト (35.6%, ebzip 圧縮レベル 0)
 
 @end group
 @group
 ==> /dict/spanish/language.ebz <==
-compressed: 12288 -> 4121 bytes (33.5%)
-compresssion level: 0
+compressed: 12288 -> 4121 バイト (33.5%, ebzip 圧縮レベル 0)
 
 @end group
 @group
 ==> /dict/spanish/catalog <==
-not compressed
+2048 バイト (非圧縮)
 @end group
 @end example
 
@@ -818,16 +757,15 @@ not compressed
 @node Options for Information,  , Information Example, Information
 @section 情報出力のオプション
 
-@samp{--subbook} オプション付きで @code{ebzipinfo} を実行すると、
-@code{ebzipinfo} は @file{LANGUAGE}、@file{CATALOG}、@file{CATALOGS}
-ファイルと、指定した副本のファイルの情報だけを出力します
-(@samp{--subbook} オプションについての詳細は、
+@samp{--subbook} や @samp{--skip-content} オプションを指定すると、条件
+に合致したファイルの情報だけを出力します
+(これらのオプションについての詳細は、
 @pxref{Partial Compression, , 一部だけの圧縮})。
 
 @code{ebzipinfo} は @samp{--force-overwrite}、
 @samp{--keep}、@samp{--level}、@samp{--no-overwrite}、
 @samp{--output-directory}、@samp{--quiet}、@samp{--silence}、
-@code{--suffix}、@samp{--test} オプションを無視します。
+@samp{--test} オプションを無視します。
 
 @c ===================================================================
 @node Delete a Book, Summary of Options, Information, Top
@@ -857,18 +795,6 @@ not compressed
 す。
 
 @table @code
-@item -c @var{case}
-@itemx --case @var{case}
-出力するファイル名に大文字・小文字のどちらを使用するのかを指定します。
-@var{case} は、@samp{upper} or @samp{lower} でなくてはいけません。
-このオプションを指定しなければ、出力側のファイルにおけるファイル名の
-大文字・小文字の使用は、入力側の書籍のファイルのファイル名と同じになり
-ます
-このオプションは、情報出力の動作のときや、@samp{--test} (@samp{-t})
-オプションを指定したときは無視されます
-
-(詳しくは、@pxref{Adjust Filenames, , ファイル名の調整})。
-
 @item -f
 @itemx --force-overwrite
 確認を求めずに、既に存在しているファイルを上書きします。
@@ -899,11 +825,11 @@ not compressed
 @item -l @var{整数}
 @itemx --level @var{整数}
 圧縮レベルを指定します。
-@var{整数} は、@samp{0}、@samp{1}、@samp{2}、@samp{3} のいずれかでなくて
-はいけません。
+@var{整数} は、@samp{0}、@samp{1}、@samp{2}、@samp{3}、@samp{4}、
+@samp{5} のいずれかでなくてはいけません。
 レベル 0 は、最も速いものの圧縮率は最悪です。
 レベル 3 は、最も遅いものの圧縮率は最良です。
-デフォルトのレベルは 0 です。
+指定しなかったときのレベルは 0 です。
 このオプションは、圧縮以外の動作のときは無視されます。
 
 (詳しくは、@pxref{Compression Level, , 圧縮レベル})。
@@ -920,7 +846,7 @@ not compressed
 @item -o @var{ディレクトリ}
 @itemx --output-directory @var{ディレクトリ}
 出力側のファイルを置くディレクトリを指定します。
-デフォルトでは、カレントディレクトリ (@samp{.}) になります。
+指定しなかったときは、カレントディレクトリ (@samp{.}) になります。
 このオプションは、情報出力の動作のときや、@samp{--test} (@samp{-t})
 オプションを指定したときは無視されます
 
@@ -934,30 +860,21 @@ not compressed
 @samp{--no-overwrite}(@samp{-n}) を指定して下さい。
 このオプションは、情報出力の動作のときは、無視されます
 
-@item -s @var{拡張子}
-@itemx --suffix @var{拡張子}
-出力側のファイルにおける、ファイル名の拡張子のスタイルを指定します。
-@var{拡張子} は、@samp{none}、@samp{dot}、@samp{version}、@samp{both} 
-のいずれかでなくてはいけません。
-@var{拡張子} が @samp{none} の場合、拡張子は付加されません。
-@var{拡張子} が @samp{dot} のときは、点 (@samp{.}) が付加されます。
-@var{拡張子} が @samp{version} のときは、バージョン番号 (@samp{;1}) 
-が付加されます。
-@var{拡張子} が @samp{both} のときは、点とバージョン番号 (@samp{.;1})
-が付加されます。
-このオプションを指定しなければ、出力側のファイルにおけるファイル名の
-拡張子は、入力側の書籍のファイルのファイル名と同じになります。
-このオプションは、情報出力の動作のときや、@samp{--test} (@samp{-t})
-オプションを指定したときは無視されます
-
-(詳しくは、@pxref{Adjust Filenames, , ファイル名の調整})。
+@item -s @var{型}
+@itemx --skip-content @var{型}
+無視するファイルのデータ型を指定します。
+@var{型} は、データ型の名前をカンマ (@samp{,}) で区切って並べたものでな
+くてはいけません。
+@code{ebzip} が現在のところ認識するデータ型の名前は、@code{font}、
+@code{graphic}、@code{sound}、@code{movie} です。
+指定しなかったときは、どのファイルも無視されません。
 
 @item -S @var{副本}
 @itemx --subbook @var{副本}
 圧縮・伸長・情報出力の対象とする副本を指定します。
 @var{副本} は、副本のディレクトリ名をカンマ (@samp{,}) で区切って
 並べたものでなくてはいけません。
-デフォルトでは、すべての副本が対象になります。
+指定しなかったときは、すべての副本が対象になります。
 
 (詳しくは、@pxref{Partial Compression, , 一部だけの圧縮})。
 
@@ -1043,6 +960,16 @@ CD-ROM 書籍を圧縮します。
 @item レベル 1               @tab   78163751 bytes  @tab  35.5%
 @end multitable
 
+ある百科事典 (S-EBXA) の @file{START} ファイルを圧縮した結果:
+
+@multitable @columnfractions .4 .3 .3
+@item 圧縮レベル            @tab  file size        @tab  ratio
+@item (非圧縮)              @tab  225140735 bytes  @tab 100.0%
+@item (元のファイル)        @tab  176467968 bytes  @tab  78.4%
+@item レベル 0              @tab  146045331 bytes  @tab  64.9%
+@item レベル 1              @tab  138137218 bytes  @tab  61.4%
+@end multitable
+
 @c ===================================================================
 @node Compressed File Format,  , Comparision Result, Top
 @appendix 圧縮ファイルの形式
@@ -1117,6 +1044,8 @@ CPU の種類、オペレーティングシステム、ファイルシステムに依存しません。
 @item 1           @tab   4096 バイト
 @item 2           @tab   8192 バイト
 @item 3           @tab  16384 バイト
+@item 3           @tab  32768 バイト
+@item 3           @tab  65536 バイト
 @end multitable
 
 @noindent
@@ -1214,7 +1143,7 @@ DEFLATE 圧縮データ形式で圧縮します。
 @example
 @group
 +---------+---------+
-|0001 0010|0011 1000|
+|0001 0010|0011 0100|
 +---------+---------+
   (0x12)    (0x34)
 @end group
@@ -1276,7 +1205,7 @@ EB ライブラリバージョン @value{VERSION} では、1 (2 進数で 0001) だけが
 @item 圧縮レベル (LSB 側の 4 ビット)
 圧縮レベルを表します。
 
-@item reserved area (2 バイト)
+@item 予約領域 (2 バイト)
 予約されていますが、使われていません。
 0x0000 で埋められます。
 

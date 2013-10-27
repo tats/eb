@@ -11,5 +11,4 @@ the sample programs, then please do the following procedure:
 	3. Type `make all'.
 	(`make install' target is not provided.)
 
-Usage of the sample programs are explained at the beginning of the
-programs.
+Usage of the sample programs are explained at the top of source files.

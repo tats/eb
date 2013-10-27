@@ -1,44 +1,29 @@
 AUTOMAKE_OPTIONS = foreign
 
-@SET_MAKE@
-
 LIBEB = ../eb/libeb.la
 
-noinst_PROGRAMS = disctype subbook word
+noinst_PROGRAMS = initexit disctype subbook word text
+
+initexit_SOURCES = initexit.c
+initexit_LDADD = $(LIBEB) $(ZLIBLIBS) $(INTLLIBS)
+initexit_DEPENDENCIES = $(LIBEB) $(ZLIBDEPS) $(INTLDEPS)
 
 disctype_SOURCES = disctype.c
-disctype_LDADD = $(LIBEB) @LDADD_FOR_LIBZ@
-disctype_DEPENDENCIES = $(LIBEB) @DEPENDENCIES_FOR_LIBZ@
+disctype_LDADD = $(LIBEB) $(ZLIBLIBS) $(INTLLIBS)
+disctype_DEPENDENCIES = $(LIBEB) $(ZLIBDEPS) $(INTLDEPS)
 
 subbook_SOURCES = subbook.c
-subbook_LDADD = $(LIBEB) @LDADD_FOR_LIBZ@
-subbook_DEPENDENCIES = $(LIBEB) @DEPENDENCIES_FOR_LIBZ@
+subbook_LDADD = $(LIBEB) $(ZLIBLIBS) $(INTLLIBS)
+subbook_DEPENDENCIES = $(LIBEB) $(ZLIBDEPS) $(INTLDEPS)
 
 word_SOURCES = word.c
-word_LDADD = $(LIBEB) @LDADD_FOR_LIBZ@
-word_DEPENDENCIES = $(LIBEB) @DEPENDENCIES_FOR_LIBZ@
+word_LDADD = $(LIBEB) $(ZLIBLIBS) $(INTLLIBS)
+word_DEPENDENCIES = $(LIBEB) $(ZLIBDEPS) $(INTLDEPS)
 
-BUILT_SOURCES = disctype.c subbook.c word.c
-EXTRA_DIST = README README-ja disctype.c.in subbook.c.in word.c.in
+text_SOURCES = text.c
+text_LDADD = $(LIBEB) $(ZLIBLIBS) $(INTLLIBS)
+text_DEPENDENCIES = $(LIBEB) $(ZLIBDEPS) $(INTLDEPS)
+
+EXTRA_DIST = README README-ja
 
 INCLUDES = -I$(srcdir)/..
-
-disctype.c: $(srcdir)/disctype.c.in
-	-@rm -f disctype.c
-	sed -e '1,/^$$/d' -e '/ ja:/d' -e 's/ en://' \
-	  $(srcdir)/disctype.c.in > disctype.c
-
-subbook.c: $(srcdir)/subbook.c.in
-	-@rm -f subbook.c
-	sed -e '1,/^$$/d' -e '/ ja:/d' -e 's/ en://' \
-	  $(srcdir)/subbook.c.in > subbook.c
-
-word.c: $(srcdir)/word.c.in
-	-@rm -f word.c
-	sed -e '1,/^$$/d' -e '/ ja:/d' -e 's/ en://' \
-	  $(srcdir)/word.c.in > word.c
-
-### *.o dependencies ###
-disctype.o: disctype.c ../eb/eb.h ../eb/defs.h ../eb/error.h
-subbook.o: subbook.c ../eb/eb.h ../eb/defs.h ../eb/error.h
-word.o: word.c ../eb/eb.h ../eb/defs.h ../eb/error.h ../eb/text.h

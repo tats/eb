@@ -14,7 +14,7 @@
 @ifinfo
 ebfont: Utility for getting font data in a CD-ROM book, by Motoyuki Kasahara.
 
-Copyright @copyright{} 1998, 1999  Motoyuki Kasahara
+Copyright @copyright{} 1998, 99, 2000, 01  Motoyuki Kasahara
 
 Permission is granted to make and distribute verbatim copies of
 this manual provided the copyright notice and this permission notice
@@ -47,7 +47,7 @@ by Free Software Foundation, Inc.
 
 @page
 @vskip 0pt plus 1filll
-Copyright @copyright{} 1998, 1999  Motoyuki Kasahara
+Copyright @copyright{} 1998, 99, 2000, 01  Motoyuki Kasahara
 
 Permission is granted to make and distribute verbatim copies of
 this manual provided the copyright notice and this permission notice
@@ -118,7 +118,7 @@ CD-ROM books also have bitmap data of the local characters.
 The @code{ebfont} command reads the bitmap data, convert them to a
 specified image formats, and write them to files.
 @code{ebfont} can generates image files as XBM (X BitMap format), XPM
-(X PixMap format) and/or GIF (Graphics Interchange Format).
+(X PixMap format), GIF (Graphics Interchange Format) and/or BMP.
 By default, XBM format is selected.
 
 Local characters are classified to two types; @dfn{narrow} and @dfn{wide}.
@@ -179,19 +179,19 @@ The generic forms of their filenames are:
 @end example
 
 @noindent
-The @var{suffix} is @samp{xbm}, @samp{xpm} or @samp{gif}.
+The @var{suffix} is @samp{xbm}, @samp{xpm}, @samp{gif} or @samp{bmp}.
 The @var{character-number} is a hexadecimal number with 4 digits
 (@samp{0} to @samp{9}, and @samp{a} to @samp{f}), like this:
 
 @example
 @group
-EJDICT/16/narrow/a121.xbm
-EJDICT/16/wide/a321.xbm
+ejdict/16/narrow/a121.xbm
+ejdict/16/wide/a321.xbm
 @end group
 @end example
 
 @noindent
-The intermediate directories such as @file{EJDICT/16/xbm/narrow} are
+The intermediate directories such as @file{ejdict/16/xbm/narrow} are
 created by @code{ebfont} if missing.
 
 @code{ebfont} can outputs image files not only under the current
@@ -212,7 +212,7 @@ The top directory must have been created before invoking @code{ebfont}.
 @node Image Formats, Heights, Invoking ebfont, Invoking ebfont
 @section Image Formats
 
-@code{ebfont} can generates image files of XBM, XPM and GIF (GIF89a)
+@code{ebfont} can generates image files of XBM, XPM, GIF89a and BMP
 formats.
 These image formats are specified at the @samp{--image-format} (@samp{-i})
 option.
@@ -235,6 +235,9 @@ An argument to @samp{--image-format} can be splitted like as follows:
 @noindent
 In the XPM and GIF formats, the foreground and background colors of 
 images are black (@samp{#000000} in RGB) and transparency.
+In the BMP format, foreground and background colors are black and
+white (@samp{#ffffff} in RGB).
+
 @code{ebzip} generates GIF images without LZW compression algolythm,
 so that the their sizes are too fat.
 
@@ -283,12 +286,12 @@ and what their directory names are.
 disc type: EB/EBG/EBXA/EXBA-C/S-EBXA
 character code: JIS X 0208
 the number of subbooks: 3
-@end group
 
+@end group
 @group
 subbook 1:
   title: New English Japanese Dictionary (4th edition)
-  directory: ENGLISH
+  directory: english
   search methods: word endword keyword menu
   font sizes: 16 24 30 48
   narrow font characters: 0xa121 -- 0xa24e
@@ -298,7 +301,7 @@ subbook 1:
 @group
 subbook 2:
   title: CD-ROM French Japanese Dictionary (3rd edition)
-  directory: FRENCH
+  directory: french
   search methods: word endword keyword menu
   font sizes: 16 24 30 48
   narrow font characters: 
@@ -308,7 +311,7 @@ subbook 2:
 @group
 subbook 3:
   title: Pocket German Japanese Dictionary (3rd edition)
-  directory: GERMAN
+  directory: german
   search methods: menu
   font sizes: 16 24 30 48
   narrow font characters: 
@@ -321,10 +324,10 @@ subbook 3:
 for more details about the @code{ebinfo} command).
 @*
 In this example, there are three subbooks in the book, and their
-directory names are @code{ENGLISH}, @code{FRENCH} and @code{GERMAN}.
+directory names are @code{english}, @code{french} and @code{german}.
 
 Inkoing the following command, @code{ebfont} generates image files for
-@code{ENGLISH} and @code{FRENCH} only.
+@code{english} and @code{french} only.
 
 @example
 % ebfont --subbook english,french /mnt/cdrom
@@ -370,7 +373,8 @@ Output help message to standard out, then exit.
 Generates image files as @var{formats}.
 @var{formats} must be a list of format names separated by a comma
 (@samp{,}).
-Supported format names are @samp{xbm}, @samp{xpm}, and @samp{gif}.
+Supported format names are @samp{xbm}, @samp{xpm}, @samp{gif} and
+@samp{bmp}.
 By default, @samp{ebfont} generates image files as XBM format.
 (@xref{Image Formats}, for more details).
 
